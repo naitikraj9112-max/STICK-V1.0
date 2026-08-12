@@ -1,0 +1,2619 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Stick — Speak to build your presentation.">
+    <title>Stick — Speak to build your deck</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@0.563.0/dist/umd/lucide.min.js"></script>
+    <style>
+      :root {
+        --ink: #11110f;
+        --paper: #f1efe8;
+        --panel: #e7e4db;
+        --line: rgba(17, 17, 15, 0.17);
+        --canvas: #e9e7df;
+        --bg-base: var(--paper);
+        --bg-elevated: #f8f6ef;
+        --bg-surface: rgba(255, 255, 255, 0.42);
+        --bg-hover: var(--panel);
+        --bg-inset: var(--canvas);
+        --border: var(--line);
+        --border-strong: rgba(17, 17, 15, 0.32);
+        --text-primary: var(--ink);
+        --text-secondary: #4e4c46;
+        --text-muted: #77746d;
+        --muted: #77746d;
+        --ember: #ff5b35;
+        --lime: var(--ink);
+        --sky: #64c9f3;
+        --lime-dim: rgba(17, 17, 15, 0.08);
+        --lime-glow: rgba(17, 17, 15, 0.14);
+        --violet: #5c5a54;
+        --violet-dim: rgba(17, 17, 15, 0.06);
+        --success: var(--ink);
+        --warning: #77746d;
+        --error: #44403c;
+        --font-display: "Arial Narrow", "Helvetica Neue", Helvetica, Arial, sans-serif;
+        --font-ui: "Arial Narrow", "Helvetica Neue", Helvetica, Arial, sans-serif;
+        --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", ui-monospace, monospace;
+        --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px;
+        --s5: 24px; --s6: 32px; --s7: 48px;
+        --r-sm: 6px; --r-md: 10px; --r-lg: 14px; --r-full: 999px;
+        --header-h: 52px;
+        --status-h: 36px;
+        --director-w: 320px;
+        --transition: 180ms cubic-bezier(0.4, 0, 0.2, 1);
+      }
+
+      *, *::before, *::after { box-sizing: border-box; }
+      html { background: var(--paper); color-scheme: light; }
+      body {
+        margin: 0;
+        min-width: 320px;
+        background: var(--paper);
+        color: var(--ink);
+        font-family: var(--font-ui);
+        font-size: 14px;
+        line-height: 1.5;
+        -webkit-font-smoothing: antialiased;
+        overflow-x: hidden;
+      }
+      button, input, select { font: inherit; color: inherit; }
+      button { cursor: pointer; border: none; background: none; }
+      a { color: inherit; text-decoration: none; }
+      button:focus-visible, a:focus-visible {
+        outline: 2px solid var(--ink);
+        outline-offset: 2px;
+      }
+
+      .app {
+        min-height: 100svh;
+        display: grid;
+        grid-template-columns: 220px minmax(0, 1fr);
+      }
+      .app-main {
+        display: grid;
+        grid-template-rows: var(--header-h) 1fr var(--status-h);
+        min-width: 0;
+        min-height: 100svh;
+      }
+      @media (max-width: 960px) {
+        .app { grid-template-columns: 1fr; }
+        .nav-sidebar { display: none; }
+      }
+
+      /* Left navigation */
+      .nav-sidebar {
+        display: flex;
+        flex-direction: column;
+        gap: var(--s2);
+        padding: var(--s4) var(--s3);
+        border-right: 1px solid var(--border);
+        background: var(--panel);
+      }
+      .nav-brand-mini {
+        display: flex; align-items: center; gap: var(--s2);
+        padding: var(--s2) var(--s2) var(--s4);
+        margin-bottom: var(--s2);
+        border-bottom: 1px solid var(--border);
+      }
+      .nav-brand-mini .brand-mark { width: 28px; height: 28px; }
+      .nav-brand-mini strong {
+        font-family: var(--font-display);
+        font-size: 14px; font-weight: 700;
+      }
+      .nav-item {
+        display: flex; align-items: center; gap: var(--s3);
+        padding: var(--s2) var(--s3);
+        border-radius: var(--r-sm);
+        color: var(--text-muted);
+        font-size: 13px; font-weight: 500;
+        transition: background var(--transition), color var(--transition);
+      }
+      .nav-item svg { width: 16px; height: 16px; flex-shrink: 0; }
+      .nav-item:hover { background: var(--bg-hover); color: var(--text-secondary); }
+      .nav-item.is-active {
+        background: rgba(17, 17, 15, 0.08);
+        color: var(--ink);
+        font-weight: 800;
+      }
+      .nav-spacer { flex: 1; }
+
+      /* ── Header ── */
+      .header {
+        position: sticky; top: 0; z-index: 50;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+        align-items: center;
+        gap: var(--s4);
+        padding: 0 var(--s5);
+        border-bottom: 1px solid var(--border);
+        background: rgba(241, 239, 232, 0.94);
+        backdrop-filter: blur(18px);
+      }
+      .brand {
+        display: inline-flex; align-items: center; gap: var(--s3);
+        min-width: 0;
+      }
+      .brand-mark {
+        flex-shrink: 0;
+        width: 30px;
+        height: 30px;
+        display: block;
+        object-fit: contain;
+      }
+      img.brand-mark {
+        background: transparent;
+      }
+      .brand-text { min-width: 0; }
+      .brand-text strong {
+        display: block;
+        font-family: var(--font-display);
+        font-size: 15px; font-weight: 700; letter-spacing: -0.03em;
+      }
+      .brand-text small {
+        display: block;
+        margin-top: 1px;
+        color: var(--text-muted);
+        font-family: var(--font-mono);
+        font-size: 9px; font-weight: 600;
+        letter-spacing: 0.1em; text-transform: uppercase;
+      }
+      .header-center { justify-self: center; }
+      .status-pill {
+        display: inline-flex; align-items: center; gap: var(--s2);
+        padding: var(--s2) var(--s3);
+        border: 1px solid var(--border);
+        border-radius: var(--r-full);
+        background: var(--bg-surface);
+        font-family: var(--font-mono);
+        font-size: 10px; font-weight: 600;
+        letter-spacing: 0.06em; text-transform: uppercase;
+        white-space: nowrap;
+      }
+      .status-pill .dot {
+        width: 7px; height: 7px; border-radius: 50%;
+        background: var(--text-muted);
+        flex-shrink: 0;
+      }
+      .status-pill[data-phase="ready"] .dot { background: var(--text-secondary); }
+      .status-pill[data-phase="connecting"] .dot { background: var(--warning); animation: pulse 1.2s ease-in-out infinite; }
+      .status-pill[data-phase="listening"] .dot {
+        background: var(--ember);
+        box-shadow: 0 0 0 4px rgba(255, 91, 53, 0.15);
+        animation: pulse 1.6s ease-in-out infinite;
+      }
+      .status-pill[data-phase="thinking"] .dot { background: var(--muted); animation: pulse 1s ease-in-out infinite; }
+      .status-pill[data-phase="building"] .dot { background: var(--ink); animation: shimmer 1.4s linear infinite; }
+      .status-pill[data-phase="presenting"] .dot { background: var(--success); }
+      .status-pill[data-phase="disconnected"] .dot { background: var(--text-muted); }
+      .status-pill[data-phase="error"] .dot { background: var(--error); }
+      .header-actions {
+        display: flex; justify-self: end; align-items: center; gap: var(--s2);
+      }
+      .conn-chip {
+        display: none;
+        align-items: center; gap: 6px;
+        padding: 5px 10px;
+        border: 1px solid var(--border);
+        border-radius: var(--r-full);
+        background: var(--bg-surface);
+        font-size: 11px; font-weight: 500;
+        color: var(--text-muted);
+      }
+      .conn-chip .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text-muted); }
+      .conn-chip[data-state="live"] { color: var(--text-secondary); }
+      .conn-chip[data-state="live"] .dot { background: var(--ink); box-shadow: 0 0 0 4px rgba(17, 17, 15, 0.08); }
+      .conn-chip[data-state="ready"] .dot { background: var(--success); }
+      .conn-chip[data-state="warn"] .dot { background: var(--warning); animation: pulse 1.2s ease-in-out infinite; }
+      .conn-chip[data-state="error"] .dot { background: var(--error); }
+      @media (min-width: 640px) { .conn-chip { display: inline-flex; } }
+
+      .header-link {
+        display: none;
+      }
+
+      .btn-present {
+        display: inline-flex; align-items: center; gap: var(--s2);
+        min-height: 34px; padding: 0 var(--s4);
+        border-radius: 3px;
+        border: 0;
+        background: var(--ink);
+        color: var(--paper);
+        font-size: 10px; font-weight: 800;
+        letter-spacing: 0.03em;
+        text-transform: uppercase;
+        transition: transform var(--transition), background var(--transition), opacity var(--transition);
+      }
+      .btn-present:hover:not(:disabled) { transform: translateY(-1px); background: #2b2a26; box-shadow: none; }
+      .btn-present svg { color: var(--paper); }
+      .btn-present:disabled { opacity: 0.35; cursor: not-allowed; transform: none; box-shadow: none; }
+      .btn-present svg { width: 14px; height: 14px; }
+      .btn-present-label-long { display: none; }
+      @media (min-width: 768px) {
+        .btn-present { min-height: 36px; padding: 0 var(--s5); }
+        .btn-present-label-short { display: none; }
+        .btn-present-label-long { display: inline; }
+      }
+
+      /* ── Workspace ── */
+      .workspace {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) var(--director-w);
+        min-height: 0;
+        overflow: hidden;
+      }
+      @media (max-width: 1024px) {
+        .workspace { grid-template-columns: 1fr; grid-template-rows: auto auto; overflow: auto; }
+      }
+
+      .stage-column {
+        display: flex; flex-direction: column;
+        min-width: 0; min-height: 0;
+        padding: var(--s4) var(--s5);
+        gap: var(--s3);
+      }
+      .stage-column.has-slides { padding-top: var(--s3); }
+      @media (max-width: 640px) { .stage-column { padding: var(--s3); } }
+
+      .stage-shell {
+        flex: 1;
+        display: flex; flex-direction: column;
+        min-height: 0;
+      }
+      .stage-shell.has-slides .stage-toolbar {
+        padding: var(--s1) var(--s3);
+        background: #181816;
+        border-bottom-color: rgba(255, 255, 255, 0.16);
+        color: rgba(241, 239, 232, 0.65);
+      }
+      .stage-shell.has-slides .stage-toolbar span:last-child { color: rgba(241, 239, 232, 0.65); }
+      .stage-shell.has-slides .stage-frame {
+        border-color: rgba(17, 17, 15, 0.32);
+        box-shadow: 0 30px 70px rgba(27, 26, 22, 0.2);
+      }
+      .stage-shell.has-slides .stage-canvas {
+        max-height: min(calc(100svh - 220px), 78vh);
+      }
+      .stage-frame {
+        position: relative;
+        flex: 1;
+        display: flex; flex-direction: column;
+        min-height: 280px;
+        border: 1px solid rgba(17, 17, 15, 0.32);
+        border-radius: 3px;
+        background: #181816;
+        overflow: hidden;
+        box-shadow: 0 30px 70px rgba(27, 26, 22, 0.2);
+      }
+      .stage-frame:fullscreen {
+        border-radius: 0; border: 0;
+        background: #000;
+        box-shadow: none;
+      }
+      .stage-frame:fullscreen .stage-toolbar,
+      .stage-frame:fullscreen .slide-strip-wrap,
+      .stage-frame:fullscreen .center-transcript,
+      .stage-frame:fullscreen .export-panel { display: none !important; }
+      .stage-frame:fullscreen .stage-canvas {
+        flex: 1;
+        aspect-ratio: unset;
+        height: 100%;
+      }
+      .stage-frame:fullscreen .fs-controls { display: flex; }
+
+      .stage-toolbar {
+        display: flex; align-items: center; justify-content: space-between;
+        padding: var(--s2) var(--s3);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.16);
+        background: #181816;
+        font-family: var(--font-mono);
+        font-size: 6px; font-weight: 600;
+        letter-spacing: 0.1em; text-transform: uppercase;
+        color: rgba(241, 239, 232, 0.65);
+      }
+      .stage-toolbar span:last-child { color: rgba(241, 239, 232, 0.65); }
+
+      .stage-canvas {
+        position: relative;
+        flex: 1;
+        aspect-ratio: 16 / 9;
+        max-height: min(calc(100svh - 300px), 68vh);
+        overflow: hidden;
+        background: var(--canvas);
+      }
+      @media (max-width: 1024px) {
+        .stage-canvas { max-height: min(52vw, 400px); }
+        .stage-shell.has-slides .stage-canvas { max-height: min(56vw, 440px); }
+      }
+
+      /* Empty state */
+      .empty-state {
+        position: absolute; inset: 0;
+        display: flex; flex-direction: column;
+        align-items: center; justify-content: center;
+        text-align: center;
+        padding: var(--s6);
+        background: var(--canvas);
+        color: var(--ink);
+      }
+      .empty-state.hidden { display: none; }
+      .listen-rings {
+        position: relative;
+        width: 128px; height: 128px;
+        margin-bottom: var(--s5);
+      }
+      .audio-bars {
+        position: absolute;
+        inset: -8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 3px;
+        pointer-events: none;
+      }
+      .audio-bars span {
+        width: 3px;
+        height: 8px;
+        border-radius: 2px;
+        background: var(--ember);
+        opacity: 0;
+        transform: scaleY(0.4);
+        transition: opacity var(--transition);
+      }
+      .empty-state[data-mode="listening"] .audio-bars span {
+        opacity: 0.55;
+        animation: audioBar 1.1s ease-in-out infinite;
+      }
+      .empty-state[data-mode="listening"] .audio-bars span:nth-child(1) { animation-delay: 0s; }
+      .empty-state[data-mode="listening"] .audio-bars span:nth-child(2) { animation-delay: 0.12s; }
+      .empty-state[data-mode="listening"] .audio-bars span:nth-child(3) { animation-delay: 0.24s; }
+      .empty-state[data-mode="listening"] .audio-bars span:nth-child(4) { animation-delay: 0.08s; }
+      .empty-state[data-mode="listening"] .audio-bars span:nth-child(5) { animation-delay: 0.2s; }
+      .empty-state[data-mode="listening"] .audio-bars span:nth-child(6) { animation-delay: 0.04s; }
+      .empty-state[data-mode="listening"] .audio-bars span:nth-child(7) { animation-delay: 0.16s; }
+      .empty-state[data-mode="thinking"] .listen-core { animation: thinkShimmer 2s ease-in-out infinite; }
+      .empty-state[data-mode="building"] .listen-core { animation: buildPulse 1.2s ease-in-out infinite; }
+      .listen-rings::before,
+      .listen-rings::after,
+      .listen-core {
+        position: absolute; inset: 0;
+        border-radius: 50%;
+      }
+      .listen-core {
+        inset: 38%;
+        display: grid; place-items: center;
+        background: var(--bg-surface);
+        border: 1px solid var(--border-strong);
+        color: var(--text-secondary);
+      }
+      .listen-core svg { width: 22px; height: 22px; }
+      .listen-rings::before {
+        border: 1px solid var(--border);
+        animation: ringPulse 3s ease-in-out infinite;
+      }
+      .listen-rings::after {
+        inset: 12%;
+        border: 1px solid rgba(17, 17, 15, 0.1);
+        animation: ringPulse 3s ease-in-out infinite 0.6s;
+      }
+      .empty-state[data-mode="listening"] .listen-rings::before { border-color: rgba(255, 91, 53, 0.35); animation-duration: 1.8s; }
+      .empty-state[data-mode="listening"] .listen-rings::after { border-color: rgba(255, 91, 53, 0.2); }
+      .empty-state[data-mode="listening"] .listen-core {
+        color: var(--ember);
+        border-color: rgba(255, 91, 53, 0.45);
+        box-shadow: 0 0 32px rgba(255, 91, 53, 0.12);
+      }
+      .empty-state[data-mode="thinking"] .listen-core { color: var(--text-secondary); border-color: var(--border-strong); }
+      .empty-state[data-mode="building"] .listen-core { color: var(--ink); border-color: var(--border-strong); }
+      .empty-title {
+        margin: 0 0 var(--s2);
+        font-family: var(--font-display);
+        font-size: clamp(1.35rem, 3vw, 1.75rem);
+        font-weight: 700; letter-spacing: -0.03em;
+      }
+      .empty-sub {
+        margin: 0 0 var(--s5);
+        max-width: 36ch;
+        color: var(--text-secondary);
+        font-size: 14px;
+      }
+      .empty-hint {
+        padding: var(--s2) var(--s4);
+        border: 1px dashed var(--border-strong);
+        border-radius: var(--r-full);
+        color: var(--text-muted);
+        font-size: 12px;
+      }
+      .empty-hint em { color: var(--text-secondary); font-style: normal; }
+      .prompt-chips { display: none !important; }
+
+      .center-transcript {
+        padding: var(--s3) var(--s4);
+        border: 1px solid var(--border);
+        border-radius: var(--r-md);
+        background: var(--bg-elevated);
+      }
+      .center-transcript .transcript-label {
+        margin: 0 0 var(--s2);
+        font-family: var(--font-mono);
+        font-size: 9px; font-weight: 600;
+        letter-spacing: 0.1em; text-transform: uppercase;
+        color: var(--text-muted);
+      }
+      .center-transcript .transcript-text {
+        margin: 0;
+        font-size: 13px; line-height: 1.5;
+        color: var(--text-secondary);
+        max-height: 4.5em;
+        overflow: hidden;
+      }
+      .center-transcript.has-content .transcript-text { color: var(--text-primary); }
+
+      .presentation-progress {
+        padding: var(--s3);
+        border: 1px solid var(--border);
+        border-radius: var(--r-md);
+        background: var(--bg-surface);
+      }
+      .progress-header {
+        display: flex; align-items: baseline; justify-content: space-between;
+        margin-bottom: var(--s2);
+      }
+      .progress-header strong {
+        font-family: var(--font-display);
+        font-size: 11px; font-weight: 700;
+        letter-spacing: 0.06em; text-transform: uppercase;
+      }
+      .progress-percent {
+        font-family: var(--font-mono);
+        font-size: 18px; font-weight: 700;
+        color: var(--ink);
+      }
+      .progress-track {
+        height: 6px;
+        border-radius: var(--r-full);
+        background: var(--bg-hover);
+        overflow: hidden;
+        margin-bottom: var(--s2);
+      }
+      .progress-fill {
+        height: 100%;
+        width: var(--progress, 0%);
+        border-radius: inherit;
+        background: var(--ink);
+        transition: width 400ms ease;
+      }
+      .progress-meta {
+        display: flex; justify-content: space-between;
+        font-size: 11px; color: var(--text-muted);
+      }
+
+      .outputs-panel {
+        padding: var(--s3);
+        border: 1px solid var(--border);
+        border-radius: var(--r-md);
+        background: var(--bg-surface);
+      }
+      .outputs-label {
+        margin: 0 0 var(--s3);
+        font-family: var(--font-mono);
+        font-size: 9px; font-weight: 600;
+        letter-spacing: 0.1em; text-transform: uppercase;
+        color: var(--text-muted);
+      }
+      .output-row {
+        display: flex; align-items: center; justify-content: space-between;
+        padding: var(--s2) 0;
+        border-bottom: 1px solid var(--border);
+        font-size: 12px;
+      }
+      .output-row:last-child { border-bottom: 0; padding-bottom: 0; }
+      .output-row:first-of-type { padding-top: 0; }
+      .output-info { display: flex; flex-direction: column; gap: 2px; }
+      .output-info strong { font-weight: 600; color: var(--text-primary); }
+      .output-info span { font-size: 11px; color: var(--text-muted); }
+      .output-action {
+        display: inline-flex; align-items: center; gap: 6px;
+        font-size: 11px; font-weight: 600;
+        color: var(--text-muted);
+      }
+      .output-row[data-status="ready"] .output-action { color: var(--success); }
+      .output-row[data-status="generating"] .output-action { color: var(--text-secondary); }
+      .output-row[data-status="error"] .output-action { color: var(--error); }
+      .output-row[data-status="idle"] .output-action { color: var(--text-muted); }
+      .spinner {
+        width: 14px; height: 14px;
+        border: 2px solid var(--border-strong);
+        border-top-color: var(--ink);
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+      }
+      @keyframes spin { to { transform: rotate(360deg); } }
+      .output-download {
+        display: none;
+        align-items: center; justify-content: center;
+        width: 28px; height: 28px;
+        border-radius: var(--r-sm);
+        background: var(--bg-hover);
+        color: var(--ink);
+      }
+      .output-row[data-status="ready"] .output-download { display: inline-flex; }
+      .output-row[data-status="ready"] .output-status-text { display: none; }
+      .output-download svg { width: 14px; height: 14px; }
+
+      /* Scene layers */
+      .scene-layer {
+        --accent: var(--ink);
+        position: absolute; inset: 0;
+        overflow: hidden;
+        background: var(--canvas);
+        color: var(--ink);
+        padding: clamp(24px, 3.5cqw, 44px) clamp(24px, 4cqw, 52px);
+        container-type: inline-size;
+      }
+      .scene-layer.accent-lime { --accent: var(--ink); }
+      .scene-layer.accent-sky { --accent: #4e4c46; }
+      .scene-layer.accent-violet { --accent: #5c5a54; }
+      .scene-layer.accent-ember { --accent: #292823; }
+      .scene-layer.is-imagery-pending::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        z-index: 1;
+        pointer-events: none;
+        background: linear-gradient(110deg, transparent 30%, rgba(255, 255, 255, 0.04) 50%, transparent 70%);
+        background-size: 200% 100%;
+        animation: imageryShimmer 1.6s ease-in-out infinite;
+      }
+      @keyframes imageryShimmer {
+        0% { background-position: 200% 0; }
+        100% { background-position: -200% 0; }
+      }
+      .scene-layer.is-entering { animation: sceneEnter 650ms cubic-bezier(0.2, 0.86, 0.22, 1) both; }
+      .scene-layer.is-updating { animation: sceneUpdate 400ms ease both; }
+
+      /* Stick welcome cover — light SaaS hero matching welcome-cover.png */
+      .scene-layer.scene-cover {
+        --accent: var(--ink);
+        padding: 0;
+        background: #f9f7f0;
+        color: #111827;
+        overflow: hidden;
+      }
+      .scene-cover .cover-frame {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #f9f7f0;
+      }
+      .scene-cover .cover-art {
+        width: 100%;
+        height: 100%;
+        max-width: 100%;
+        max-height: 100%;
+        object-fit: contain;
+        object-position: center center;
+        display: block;
+      }
+      .scene-cover .cover-await {
+        position: absolute;
+        bottom: clamp(10px, 1.8cqw, 18px);
+        left: clamp(12px, 2.4cqw, 28px);
+        margin: 0;
+        padding: 8px 14px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.9);
+        border: 1px solid rgba(17, 24, 39, 0.08);
+        font-family: var(--font-mono);
+        font-size: clamp(0.62rem, 0.95cqw, 0.76rem);
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: rgba(17, 24, 39, 0.58);
+        box-shadow: 0 6px 20px rgba(17, 24, 39, 0.08);
+        z-index: 3;
+      }
+      .scene-cover .cover-await.is-live {
+        color: var(--text-primary);
+        border-color: rgba(255, 255, 255, 0.2);
+      }
+      .scene-noise {
+        position: absolute; inset: 0; z-index: 1; opacity: 0.14; pointer-events: none;
+        background:
+          repeating-linear-gradient(0deg, rgba(255,255,255,0.02) 0, rgba(255,255,255,0.02) 1px, transparent 1px, transparent 3px),
+          radial-gradient(circle at 72% 28%, color-mix(in srgb, var(--accent) 22%, transparent), transparent 38%);
+      }
+      .scene-content { position: relative; z-index: 2; height: 100%; display: flex; flex-direction: column; justify-content: center; }
+      .scene-eyebrow {
+        margin: 0 0 8px; color: var(--accent);
+        font-family: var(--font-mono); font-size: clamp(7px, 0.75cqw, 10px);
+        font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase;
+      }
+      .scene-title {
+        margin: 0 0 10px;
+        font-size: clamp(1.6rem, 4.2cqw, 3rem);
+        font-weight: 800; letter-spacing: -0.04em; line-height: 1.05; max-width: 18ch;
+      }
+      .scene-subtitle { margin: 0; max-width: 42ch; color: #4e4c46; font-size: clamp(.85rem, 1.3cqw, 1.05rem); line-height: 1.4; }
+      .editorial-layout { display: grid; grid-template-columns: 1fr minmax(140px, 42%); gap: clamp(16px, 2.5cqw, 28px); align-items: center; height: 100%; }
+      .editorial-copy { display: flex; flex-direction: column; gap: clamp(8px, 1.2cqw, 14px); justify-content: center; min-height: 0; min-width: 0; }
+      .layout-full-width { display: flex; flex-direction: column; gap: clamp(10px, 1.4cqw, 16px); height: 100%; justify-content: center; }
+      .layout-visual-focus { display: flex; flex-direction: column; gap: clamp(12px, 1.6cqw, 18px); height: 100%; }
+      .layout-visual-focus .hero-visual { aspect-ratio: 16 / 9; max-height: 52%; width: 100%; }
+      .layout-small-visual { position: relative; height: 100%; }
+      .layout-small-visual .editorial-copy { padding-right: clamp(120px, 22cqw, 280px); }
+      .layout-small-visual .hero-visual.hero-visual-small {
+        position: absolute; top: 0; right: 0;
+        width: clamp(110px, 18cqw, 220px); aspect-ratio: 4 / 3;
+      }
+      .layout-quote { display: grid; place-items: center; text-align: center; height: 100%; padding: clamp(20px, 4cqw, 48px); }
+      .layout-quote .scene-title { max-width: 24ch; font-size: clamp(1.5rem, 3.6cqw, 2.6rem); font-style: italic; }
+      .arch-stack { display: flex; flex-direction: column; gap: 10px; align-items: center; margin-top: 8px; }
+      .arch-node {
+        width: min(100%, 520px); padding: 10px 16px; border-radius: 12px;
+        border: 2px solid color-mix(in srgb, var(--accent) 50%, #e5e7eb);
+        background: #fff; text-align: center; font-weight: 700; font-size: clamp(.82rem, 1.1cqw, .95rem);
+      }
+      .arch-arrow { width: 2px; height: 14px; background: var(--accent); margin: 0 auto; }
+      .pipe-row { display: flex; align-items: center; justify-content: center; gap: clamp(8px, 1.2cqw, 16px); flex-wrap: wrap; margin-top: 12px; }
+      .pipe-node { display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: 72px; }
+      .pipe-node .pipe-dot {
+        width: 34px; height: 34px; border-radius: 50%; background: var(--accent); color: #fff;
+        display: grid; place-items: center; font-weight: 800; font-size: 12px;
+      }
+      .pipe-node strong { font-size: clamp(.75rem, 1cqw, .88rem); text-align: center; }
+      .pipe-connector { width: clamp(20px, 4cqw, 48px); height: 3px; background: var(--accent); border-radius: 2px; }
+      .metrics-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: clamp(10px, 1.2cqw, 16px); margin-top: 12px; }
+      .metric-card {
+        background: #fff; border: 1px solid #e5e7eb; border-radius: 14px; padding: clamp(14px, 1.6cqw, 20px);
+        text-align: center; box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+      }
+      .metric-card .metric-value { font-size: clamp(1.6rem, 3.2cqw, 2.4rem); font-weight: 800; color: var(--accent); }
+
+      /* ZeroPrep-style editorial — light slide + right-panel Gemini visual on every slide type */
+      .scene-layer.scene-editorial {
+        background: #fafafa;
+        color: #111827;
+      }
+      .scene-layer.scene-editorial .scene-noise { display: none; }
+      .scene-layer.scene-editorial .scene-eyebrow { color: var(--ink); }
+      .scene-layer.scene-editorial .scene-title { color: #111827; max-width: 16ch; font-size: clamp(1.35rem, 3.4cqw, 2.4rem); }
+      .scene-layer.scene-editorial .scene-subtitle { color: #4b5563; max-width: 36ch; }
+      .scene-layer.scene-editorial .hero-subtitle-row {
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+        max-width: 38ch;
+      }
+      .scene-layer.scene-editorial .hero-subtitle-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: var(--ink);
+        flex-shrink: 0;
+        margin-top: 0.35em;
+      }
+      .scene-layer.scene-editorial .card-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: clamp(6px, 0.9cqw, 10px);
+        margin-top: clamp(6px, 1cqw, 12px);
+      }
+      .scene-layer.scene-editorial .idea-card {
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-top: 3px solid var(--ink);
+        box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+      }
+      .scene-layer.scene-editorial .idea-card p { color: #6b7280; }
+      .scene-layer.scene-editorial .idea-card h3 { color: #111827; }
+      .scene-layer.scene-editorial .pipeline-list li {
+        border-bottom-color: #e5e7eb;
+        color: #374151;
+      }
+      .scene-layer.scene-editorial .pipeline-list li::before { color: #fff; }
+      .scene-layer.scene-editorial .metric-value { color: var(--ink); }
+      .scene-layer.scene-editorial .metric-label { color: #6b7280; }
+      .scene-layer.scene-editorial .quote-text { color: #111827; font-style: italic; font-weight: 700; }
+      .scene-layer.scene-editorial .quote-attrib { color: #6b7280; }
+
+      /* legacy alias */
+      .scene-layer.scene-hero { background: #fafafa; color: #111827; }
+      .hero-visual {
+        width: 100%;
+        aspect-ratio: 1;
+        border-radius: clamp(10px, 1.2cqw, 16px);
+        overflow: hidden;
+        border: 1px solid rgba(0, 0, 0, 0.08);
+        box-shadow: 0 12px 40px rgba(15, 23, 42, 0.12);
+        background: linear-gradient(145deg, #eef2f7, #e5e7eb);
+        display: grid;
+        place-items: center;
+      }
+      .hero-visual img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+      }
+      .hero-visual.is-pending {
+        background: linear-gradient(110deg, #eef2f7 30%, #f8fafc 50%, #eef2f7 70%);
+        background-size: 200% 100%;
+        animation: imageryShimmer 1.6s ease-in-out infinite;
+      }
+      .hero-visual-fallback {
+        width: clamp(48px, 8cqw, 72px);
+        height: clamp(48px, 8cqw, 72px);
+        border-radius: 50%;
+        display: grid;
+        place-items: center;
+        background: color-mix(in srgb, var(--accent) 14%, white);
+        color: var(--accent);
+      }
+      .hero-visual-fallback svg { width: 46%; height: 46%; }
+      .card-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: clamp(8px, 1cqw, 12px); margin-top: clamp(10px, 1.4cqw, 18px); }
+      .idea-card {
+        min-width: 0; padding: clamp(10px, 1.1cqw, 14px);
+        border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+        border-top: 2px solid var(--accent); border-radius: var(--r-sm);
+        background: rgba(255,255,255,0.03);
+        animation: cardRise 500ms ease backwards;
+      }
+      .idea-card:nth-child(2) { animation-delay: 60ms; }
+      .idea-card:nth-child(3) { animation-delay: 120ms; }
+      .idea-card:nth-child(4) { animation-delay: 180ms; }
+      .idea-card-head { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+      .idea-card-head svg { width: 14px; height: 14px; color: var(--accent); flex-shrink: 0; }
+      .idea-card h3 { margin: 0; font-size: clamp(.8rem, 1.2cqw, .95rem); font-weight: 700; }
+      .idea-card p { margin: 0; color: #6b7280; font-size: clamp(.72rem, 0.95cqw, .84rem); line-height: 1.35; }
+      .pipeline-list { list-style: none; padding: 0; margin: 14px 0 0; counter-reset: step; }
+      .pipeline-list li {
+        counter-increment: step; display: flex; gap: 10px; align-items: flex-start;
+        padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,.07);
+        font-size: clamp(.82rem, 1.15cqw, .95rem);
+      }
+      .pipeline-list li::before {
+        content: counter(step); width: 24px; height: 24px; border-radius: 50%;
+        background: var(--accent); color: #0a0a0b; font-weight: 800; font-size: 10px;
+        display: grid; place-items: center; flex-shrink: 0;
+      }
+      .metric-layout { display: grid; grid-template-columns: 1fr auto; gap: 8%; align-items: center; }
+      .metric-ring {
+        position: relative; width: clamp(110px, 14cqw, 160px); aspect-ratio: 1;
+        border: clamp(7px, 1cqw, 12px) solid rgba(255,255,255,.07);
+        border-top-color: var(--accent); border-right-color: var(--accent);
+        border-radius: 50%; display: grid; place-items: center;
+        transform: rotate(-12deg);
+      }
+      .metric-value { font-size: clamp(1.8rem, 4.5cqw, 3rem); font-weight: 800; letter-spacing: -0.05em; transform: rotate(12deg); }
+      .metric-label { margin-top: 6px; font-family: var(--font-mono); font-size: 8px; letter-spacing: 0.08em; color: #77746d; text-align: center; }
+      .quote-mark {
+        width: 42px; height: 42px; border-radius: 50%;
+        border: 1px solid color-mix(in srgb, var(--accent) 60%, white);
+        background: color-mix(in srgb, var(--accent) 20%, transparent);
+        display: grid; place-items: center; color: var(--accent); margin-bottom: 14px;
+      }
+      .quote-mark svg { width: 46%; height: 46%; }
+      .quote-layout blockquote {
+        margin: 0 0 10px; font-size: clamp(1.25rem, 3.2cqw, 2.1rem);
+        font-weight: 800; letter-spacing: -0.03em; line-height: 1.08; max-width: 20ch;
+      }
+      .quote-layout cite { color: #77746d; font-style: normal; font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.08em; }
+
+      .fs-controls {
+        display: none;
+        position: absolute; z-index: 20;
+        right: var(--s4); bottom: var(--s4); left: var(--s4);
+        align-items: center; justify-content: space-between;
+        padding: var(--s3) var(--s4);
+        border: 1px solid var(--border);
+        border-radius: var(--r-md);
+        background: rgba(241, 239, 232, 0.92);
+        backdrop-filter: blur(16px);
+        font-family: var(--font-mono);
+        font-size: 10px; color: var(--text-secondary);
+      }
+      .fs-nav {
+        display: flex; align-items: center; gap: var(--s2);
+      }
+      .fs-nav button {
+        width: 32px; height: 32px;
+        display: grid; place-items: center;
+        border-radius: var(--r-sm);
+        background: var(--bg-hover);
+        color: var(--text-primary);
+      }
+      .fs-nav button:disabled { opacity: 0.3; cursor: not-allowed; }
+      .fs-nav button svg { width: 16px; height: 16px; }
+      .fs-controls button {
+        padding: var(--s2) var(--s3);
+        border-radius: var(--r-sm);
+        background: var(--bg-hover);
+        font-size: 11px; font-weight: 600;
+      }
+
+      /* Slide strip */
+      .slide-strip-wrap { flex-shrink: 0; }
+      .section-label {
+        display: flex; align-items: center; justify-content: space-between;
+        margin-bottom: var(--s3);
+        font-family: var(--font-mono);
+        font-size: 9px; font-weight: 600;
+        letter-spacing: 0.1em; text-transform: uppercase;
+        color: var(--text-muted);
+      }
+      .slide-strip {
+        display: flex; gap: var(--s3);
+        overflow-x: auto; padding-bottom: var(--s2);
+        scrollbar-width: thin;
+        scrollbar-color: var(--border) transparent;
+      }
+      .slide-strip-empty {
+        padding: var(--s3) var(--s4);
+        border: 1px dashed var(--border);
+        border-radius: var(--r-md);
+        color: var(--text-muted);
+        font-size: 12px;
+      }
+      .slide-thumb {
+        flex: 0 0 128px;
+        display: flex; flex-direction: column; gap: var(--s2);
+        padding: var(--s2);
+        border: 1px solid var(--border);
+        border-radius: var(--r-md);
+        background: var(--bg-surface);
+        text-align: left;
+        transition: border-color var(--transition), background var(--transition), transform var(--transition);
+      }
+      .slide-thumb:hover { border-color: var(--border-strong); background: var(--bg-hover); transform: translateY(-1px); }
+      .slide-thumb.is-current { border-color: var(--ink); box-shadow: 0 0 0 1px rgba(17, 17, 15, 0.12); }
+      .slide-thumb.is-generating { border-color: rgba(17, 17, 15, 0.28); }
+      .slide-thumb-preview {
+        aspect-ratio: 16 / 9;
+        border-radius: var(--r-sm);
+        overflow: hidden;
+        background: var(--canvas);
+        position: relative;
+      }
+      .slide-thumb-preview .mini-scene {
+        position: absolute;
+        inset: 0;
+        transform-origin: top left;
+        pointer-events: none;
+        overflow: hidden;
+      }
+      .slide-thumb-preview .mini-scene .scene-layer {
+        position: absolute;
+        inset: 0;
+        padding: 8px 10px;
+      }
+      .slide-thumb-preview .mini-scene .scene-title { font-size: 7px; margin-bottom: 2px; }
+      .slide-thumb-preview .mini-scene .scene-subtitle { font-size: 5px; display: none; }
+      .slide-thumb-preview .mini-scene .scene-eyebrow { font-size: 4px; margin-bottom: 2px; }
+      .slide-thumb-preview .mini-scene .hero-visual { width: 28px; height: 28px; border-radius: 4px; }
+      .slide-thumb-preview .mini-scene .hero-icon { width: 18px; height: 18px; }
+      .slide-thumb-preview .mini-scene .card-grid { display: none; }
+      .slide-thumb-title {
+        font-size: 10px; font-weight: 600; line-height: 1.3;
+        color: var(--text-primary);
+        display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+      }
+      .slide-thumb-meta {
+        display: flex; align-items: center; justify-content: space-between;
+        font-family: var(--font-mono);
+        font-size: 9px; color: var(--text-muted);
+      }
+      .slide-thumb-status { display: inline-flex; align-items: center; gap: 4px; }
+      .slide-thumb-status[data-status="completed"] { color: var(--success); }
+      .slide-thumb-status[data-status="editing"] { color: var(--ember); }
+      .slide-thumb-status[data-status="failed"] { color: var(--error); }
+
+      .export-panel { display: none; }
+
+      /* Director panel — ZeroPrep paper + accent bar */
+      .director-column {
+        position: relative;
+        display: flex; flex-direction: column; gap: var(--s3);
+        min-width: 0;
+        padding: var(--s4);
+        border-left: 1px solid var(--border);
+        background: var(--panel);
+        overflow-y: auto;
+      }
+      .director-column::before {
+        content: "";
+        position: absolute;
+        top: 0; right: 0; left: 0;
+        height: 4px;
+        background: linear-gradient(90deg, var(--ember) 0 33%, #c9f452 33% 66%, var(--sky) 66%);
+      }
+      @media (max-width: 1024px) {
+        .director-column { border-left: 0; border-top: 1px solid var(--border); }
+        .director-column.is-collapsed .director-body { display: none; }
+        .director-header { display: none; }
+      }
+      .director-toggle {
+        display: none;
+        width: 100%;
+        align-items: center; justify-content: space-between;
+        padding: var(--s3);
+        border: 1px solid var(--border);
+        border-radius: var(--r-md);
+        background: var(--bg-surface);
+        font-size: 12px; font-weight: 600;
+        color: var(--text-secondary);
+      }
+      .director-toggle svg { width: 16px; height: 16px; transition: transform var(--transition); }
+      .director-column:not(.is-collapsed) .director-toggle svg { transform: rotate(180deg); }
+      @media (max-width: 1024px) { .director-toggle { display: flex; } }
+
+      .director-body { display: flex; flex-direction: column; gap: var(--s3); }
+      .director-header {
+        display: flex; align-items: flex-start; justify-content: space-between; gap: var(--s3);
+      }
+      .director-header h2 {
+        margin: 0;
+        font-family: var(--font-display);
+        font-size: 12px; font-weight: 800;
+        letter-spacing: 0.06em; text-transform: uppercase;
+      }
+      .director-badge {
+        padding: 3px 8px;
+        border-radius: var(--r-full);
+        background: rgba(255, 91, 53, 0.12);
+        color: var(--ember);
+        font-family: var(--font-mono);
+        font-size: 9px; font-weight: 700;
+        letter-spacing: 0.08em;
+      }
+      .director-badge.is-live {
+        background: rgba(255, 91, 53, 0.12);
+        color: var(--ember);
+      }
+      .director-badge:not(.is-live) { background: rgba(255, 255, 255, 0.34); color: var(--text-muted); border: 1px solid var(--border); }
+      .director-status-line {
+        margin: 0;
+        font-family: var(--font-display);
+        font-size: clamp(1.25rem, 2.2vw, 1.75rem);
+        font-weight: 900;
+        letter-spacing: -0.04em; line-height: 1.1;
+        color: var(--ink);
+      }
+      .director-status-line.thinking { color: var(--text-secondary); }
+      .director-status-line.building { color: var(--ink); }
+
+      .activity-timeline {
+        display: flex; flex-direction: column; gap: var(--s2);
+        padding: var(--s3);
+        border: 1px solid var(--border);
+        border-radius: var(--r-md);
+        background: var(--bg-surface);
+      }
+      .timeline-step {
+        display: flex; align-items: center; gap: var(--s3);
+        font-size: 12px; color: var(--text-muted);
+      }
+      .timeline-step .icon {
+        width: 18px; height: 18px;
+        display: grid; place-items: center;
+        border-radius: 50%;
+        background: var(--bg-hover);
+        font-size: 10px; flex-shrink: 0;
+      }
+      .timeline-step.done { color: var(--text-secondary); }
+      .timeline-step.done .icon { background: rgba(17, 17, 15, 0.08); color: var(--ink); }
+      .timeline-step.active { color: var(--text-primary); }
+      .timeline-step.active .icon { background: rgba(255, 91, 53, 0.12); color: var(--ember); animation: pulse 1.4s ease-in-out infinite; }
+
+      .instruction-block {
+        padding: var(--s3);
+        border: 1px solid var(--border);
+        border-radius: var(--r-md);
+        background: var(--bg-surface);
+      }
+      .instruction-label {
+        margin: 0 0 var(--s2);
+        font-family: var(--font-mono);
+        font-size: 9px; font-weight: 600;
+        letter-spacing: 0.1em; text-transform: uppercase;
+        color: var(--text-muted);
+      }
+      .instruction-text {
+        margin: 0;
+        font-size: 13px; line-height: 1.45;
+        color: var(--text-primary);
+        font-weight: 500;
+      }
+      .instruction-text.is-empty { color: var(--text-muted); font-weight: 400; font-style: italic; }
+
+      .deck-structure {
+        display: flex; flex-wrap: wrap; gap: 6px;
+        padding: var(--s3);
+        border: 1px solid var(--border);
+        border-radius: var(--r-md);
+        background: var(--bg-surface);
+      }
+      .deck-structure-label {
+        width: 100%;
+        margin: 0 0 2px;
+        font-family: var(--font-mono);
+        font-size: 9px; font-weight: 600;
+        letter-spacing: 0.1em; text-transform: uppercase;
+        color: var(--text-muted);
+      }
+      .deck-stage {
+        padding: 4px 8px;
+        border-radius: var(--r-full);
+        border: 1px solid var(--border);
+        font-size: 10px; font-weight: 600;
+        color: var(--text-muted);
+        white-space: nowrap;
+      }
+      .deck-stage.is-done { color: var(--text-secondary); border-color: rgba(17, 17, 15, 0.14); }
+      .deck-stage.is-current { color: var(--ink); border-color: rgba(17, 17, 15, 0.28); background: rgba(17, 17, 15, 0.06); }
+      .deck-stage.is-next { color: var(--text-muted); opacity: 0.65; }
+
+      .transcript-block {
+        padding: var(--s3);
+        border: 1px solid var(--border);
+        border-radius: var(--r-md);
+        background: var(--bg-surface);
+      }
+      .transcript-label {
+        margin: 0 0 var(--s2);
+        font-family: var(--font-mono);
+        font-size: 9px; font-weight: 600;
+        letter-spacing: 0.1em; text-transform: uppercase;
+        color: var(--text-muted);
+      }
+      .transcript-text {
+        margin: 0;
+        font-size: 13px; line-height: 1.5;
+        color: var(--text-secondary);
+        min-height: 2.8em;
+      }
+      .transcript-text.is-partial { color: var(--text-muted); font-style: italic; }
+      .transcript-text:not(:empty)::before { content: "\201C"; color: var(--text-muted); }
+      .transcript-text:not(:empty)::after { content: "\201D"; color: var(--text-muted); }
+
+      .suggestion {
+        padding: var(--s3);
+        border-left: 2px solid var(--ink);
+        border-radius: 0 var(--r-sm) var(--r-sm) 0;
+        background: rgba(17, 17, 15, 0.04);
+        font-size: 12px; color: var(--text-secondary);
+      }
+      .suggestion strong { display: block; margin-bottom: 4px; color: var(--text-primary); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+
+      .btn-start {
+        display: grid; grid-template-columns: 42px 1fr auto;
+        align-items: center; gap: var(--s3);
+        width: 100%;
+        min-height: 66px;
+        padding: 10px 12px;
+        border: 0;
+        border-radius: 3px;
+        background: var(--ink);
+        color: var(--paper);
+        text-align: left;
+        transition: transform var(--transition), background var(--transition), box-shadow var(--transition);
+      }
+      .btn-start:hover:not(:disabled) { transform: translateY(-2px); background: #292823; }
+      .btn-start:disabled { opacity: 0.75; cursor: progress; }
+      .btn-start.is-live,
+      .btn-start.is-live:hover:not(:disabled) {
+        background: var(--ember);
+        color: var(--ink);
+      }
+      .btn-start.is-live:hover:not(:disabled) { box-shadow: 0 10px 24px rgba(255, 91, 53, 0.22); }
+      .btn-start-icon {
+        width: 40px; height: 40px;
+        display: grid; place-items: center;
+        border-radius: 50%;
+        border: 1px solid rgba(241, 239, 232, 0.26);
+        background: transparent;
+        color: var(--paper);
+      }
+      .btn-start.is-live .btn-start-icon {
+        border-color: rgba(17, 17, 15, 0.24);
+        background: transparent;
+        color: var(--ink);
+      }
+      .btn-start-icon svg { width: 18px; height: 18px; }
+      .btn-start-copy strong { display: block; font-size: 12px; font-weight: 800; letter-spacing: -0.01em; }
+      .btn-start-copy small {
+        display: block; margin-top: 3px;
+        color: rgba(241, 239, 232, 0.55);
+        font-family: var(--font-mono);
+        font-size: 6px; font-weight: 700;
+        letter-spacing: 0.08em; text-transform: uppercase;
+      }
+      .btn-start.is-live .btn-start-copy small { color: rgba(17, 17, 15, 0.55); }
+      .btn-start-arrow { color: rgba(241, 239, 232, 0.72); font-size: 16px; font-weight: 700; }
+      .btn-start.is-live .btn-start-arrow { color: var(--ink); }
+
+      .session-debug {
+        padding: var(--s2) var(--s3);
+        border-radius: var(--r-sm);
+        background: var(--bg-inset);
+        font-family: var(--font-mono);
+        font-size: 10px; color: var(--text-muted);
+        line-height: 1.5;
+      }
+      .session-debug.hidden { display: none; }
+
+      /* Bottom status strip */
+      .status-strip {
+        display: flex; align-items: center;
+        gap: var(--s5);
+        padding: 0 var(--s5);
+        border-top: 1px solid var(--border);
+        background: var(--bg-elevated);
+        overflow-x: auto;
+        font-size: 11px; color: var(--text-muted);
+        white-space: nowrap;
+      }
+      .status-item {
+        display: inline-flex; align-items: center; gap: var(--s2);
+        flex-shrink: 0;
+      }
+      .status-item .indicator {
+        width: 6px; height: 6px; border-radius: 50%;
+        background: var(--text-muted);
+      }
+      .status-item.is-active .indicator { background: var(--ember); }
+      .status-item.is-ready .indicator { background: var(--success); }
+      .status-item.is-warn .indicator { background: var(--warning); }
+      .status-item.is-error .indicator { background: var(--error); }
+
+      .hidden { display: none !important; }
+
+      @keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.55; transform: scale(0.92); } }
+      @keyframes ringPulse { 0%, 100% { transform: scale(1); opacity: 0.5; } 50% { transform: scale(1.06); opacity: 1; } }
+      @keyframes shimmer { 0% { opacity: 0.4; } 50% { opacity: 1; } 100% { opacity: 0.4; } }
+      @keyframes audioBar { 0%, 100% { transform: scaleY(0.35); opacity: 0.35; } 50% { transform: scaleY(1); opacity: 0.75; } }
+      @keyframes thinkShimmer { 0%, 100% { box-shadow: 0 0 0 rgba(255, 255, 255, 0); } 50% { box-shadow: 0 0 24px rgba(255, 255, 255, 0.12); } }
+      @keyframes buildPulse { 0%, 100% { box-shadow: 0 0 0 rgba(255, 255, 255, 0); } 50% { box-shadow: 0 0 28px rgba(255, 255, 255, 0.1); } }
+      @keyframes sceneEnter { from { opacity: 0; transform: translateY(14px) scale(0.99); } to { opacity: 1; transform: none; } }
+      @keyframes sceneUpdate { 0% { filter: brightness(1.12); } 100% { filter: brightness(1); } }
+      @keyframes cardRise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+      @keyframes successPop { 0% { transform: scale(0.96); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+
+      @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after {
+          animation-duration: 0.01ms !important;
+          animation-iteration-count: 1 !important;
+          transition-duration: 0.01ms !important;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <aside class="nav-sidebar" aria-label="Main navigation">
+        <div class="nav-brand-mini">
+          <img class="brand-mark" src="/static/stick-logo.svg" alt="Stick" width="28" height="28">
+          <strong>Stick</strong>
+        </div>
+        <a class="nav-item is-active" href="#workspace"><i data-lucide="radio"></i><span>Live Session</span></a>
+        <a class="nav-item" href="#outputs-panel"><i data-lucide="download"></i><span>Exports</span></a>
+        <div class="nav-spacer"></div>
+      </aside>
+
+      <div class="app-main">
+      <header class="header" role="banner">
+        <a class="brand" href="#workspace" aria-label="Stick home">
+          <img class="brand-mark" src="/static/stick-logo.svg" alt="Stick" width="30" height="30">
+          <span class="brand-text">
+            <strong>Stick</strong>
+            <small>Live presentations</small>
+          </span>
+        </a>
+
+        <div class="header-center">
+          <div class="status-pill" id="status-pill" data-phase="ready" role="status" aria-live="polite">
+            <span class="dot" aria-hidden="true"></span>
+            <span id="header-status-label">Ready to start</span>
+          </div>
+        </div>
+
+        <div class="header-actions">
+          <div class="conn-chip" id="conn-chip" data-state="idle" aria-label="Connection status">
+            <span class="dot" aria-hidden="true"></span>
+            <span id="conn-chip-label">Ready</span>
+          </div>
+          <button class="btn-present" id="present-btn" type="button" aria-label="Present fullscreen" disabled>
+            <span class="btn-present-label-short">Present</span>
+            <span class="btn-present-label-long">Present Fullscreen</span>
+            <i data-lucide="play"></i>
+          </button>
+        </div>
+      </header>
+
+      <main class="workspace" id="workspace">
+        <section class="stage-column" id="stage-column" aria-label="Presentation stage">
+          <div class="stage-shell" id="stage-shell">
+            <div class="stage-frame" id="stage-frame">
+              <div class="stage-toolbar">
+                <span id="stage-kind">Live canvas</span>
+                <span id="stage-meta">16:9 · Awaiting speech</span>
+              </div>
+              <div class="stage-canvas" id="stage-canvas" aria-live="polite">
+                <div class="empty-state" id="empty-state" data-mode="idle">
+                  <div class="listen-rings" aria-hidden="true">
+                    <div class="audio-bars"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+                    <div class="listen-core"><i data-lucide="mic"></i></div>
+                  </div>
+                  <h1 class="empty-title" id="empty-title">Speak. I'll build.</h1>
+                  <p class="empty-sub" id="empty-sub">Ready when you are. Start a live session and describe your presentation naturally.</p>
+                  <p class="empty-hint hidden" id="empty-hint"><em>Try:</em> Explain my project architecture</p>
+                </div>
+              </div>
+              <div class="fs-controls" id="fs-controls" aria-label="Fullscreen controls">
+                <div class="fs-nav" id="fs-nav">
+                  <button type="button" id="fs-prev-btn" aria-label="Previous slide"><i data-lucide="chevron-left"></i></button>
+                  <span id="fs-slide-label">Slide 0 / 0</span>
+                  <button type="button" id="fs-next-btn" aria-label="Next slide"><i data-lucide="chevron-right"></i></button>
+                </div>
+                <button type="button" id="fs-exit-btn">Exit · Esc</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="center-transcript" id="center-transcript">
+            <p class="transcript-label">You said</p>
+            <p class="transcript-text" id="transcript" aria-live="polite">Start speaking to build your deck.</p>
+          </div>
+
+          <div class="slide-strip-wrap">
+            <div class="section-label">
+              <span>Recent scenes</span>
+              <span id="slide-count-label">0 scenes</span>
+            </div>
+            <div class="slide-strip" id="slide-nav" role="tablist" aria-label="Recent slides">
+              <div class="slide-strip-empty" id="slide-strip-empty">No slides yet — start speaking.</div>
+            </div>
+          </div>
+        </section>
+
+        <aside class="director-column" id="director-column" aria-label="Stick AI Director">
+          <button class="director-toggle" id="director-toggle" type="button" aria-expanded="true" aria-controls="director-body">
+            <span>Stick AI Director</span>
+            <i data-lucide="chevron-down"></i>
+          </button>
+          <div class="director-body" id="director-body">
+          <div class="director-header">
+            <h2>Stick AI Director</h2>
+            <span class="director-badge" id="director-badge">Standby</span>
+          </div>
+          <p class="director-status-line" id="director-status-line">Ready when you are.</p>
+
+          <div class="instruction-block">
+            <p class="instruction-label">Current instruction</p>
+            <p class="instruction-text is-empty" id="current-instruction">Waiting for your first idea…</p>
+          </div>
+
+          <div class="deck-structure" id="deck-structure" aria-label="Presentation structure">
+            <p class="deck-structure-label">Deck structure</p>
+          </div>
+
+          <div class="activity-timeline" id="activity-timeline" aria-label="AI activity">
+            <div class="timeline-step" data-step="understand"><span class="icon">○</span><span>Idea detected</span></div>
+            <div class="timeline-step" data-step="plan"><span class="icon">○</span><span>Structure planned</span></div>
+            <div class="timeline-step" data-step="build"><span class="icon">○</span><span>Building slide</span></div>
+            <div class="timeline-step" data-step="media"><span class="icon">○</span><span>Generating visual</span></div>
+            <div class="timeline-step" data-step="sync"><span class="icon">○</span><span>Finalizing deck</span></div>
+            <div class="timeline-step" data-step="video"><span class="icon">○</span><span>Rendering video</span></div>
+          </div>
+
+          <div class="presentation-progress" id="presentation-progress">
+            <div class="progress-header">
+              <strong>Presentation status</strong>
+              <span class="progress-percent" id="progress-percent">0%</span>
+            </div>
+            <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
+            <div class="progress-meta">
+              <span id="progress-slides">No slides yet</span>
+              <span id="progress-eta">Est. time: —</span>
+            </div>
+          </div>
+
+          <div class="outputs-panel" id="outputs-panel" aria-label="Export outputs">
+            <p class="outputs-label">Outputs</p>
+            <div class="output-row" id="output-pptx" data-status="idle">
+              <div class="output-info">
+                <strong>PowerPoint</strong>
+                <span id="generation-detail">Builds automatically as you speak</span>
+              </div>
+              <div class="output-action">
+                <span class="output-status-text" id="generation-status">Waiting</span>
+                <a class="output-download" id="download-link" href="#" aria-label="Download PowerPoint">
+                  <i data-lucide="download"></i>
+                </a>
+              </div>
+            </div>
+            <div class="output-row" id="output-video" data-status="idle">
+              <div class="output-info">
+                <strong>Video (MP4)</strong>
+                <span id="video-status-detail">Generate after deck is ready</span>
+              </div>
+              <div class="output-action">
+                <span class="output-status-text" id="video-status-label">Waiting</span>
+                <span class="spinner hidden" id="video-spinner" aria-hidden="true"></span>
+                <button type="button" class="btn-video visible" id="video-generate-btn" style="display:none;border:0;background:transparent;padding:0;font-size:11px;color:var(--text-secondary)">Generate</button>
+                <a class="output-download" id="video-download-link" href="#" aria-label="Download video">
+                  <i data-lucide="film"></i>
+                </a>
+              </div>
+            </div>
+          </div>
+
+          <div class="suggestion" id="suggestion">
+            <strong>Suggested next</strong>
+            <span id="suggestion-text">Click start and describe your first slide.</span>
+          </div>
+
+          <button class="btn-start" id="start" type="button" aria-label="Start live presentation">
+            <span class="btn-start-icon" aria-hidden="true"><i data-lucide="mic"></i></span>
+            <span class="btn-start-copy">
+              <strong>Start live presentation</strong>
+              <small>Speak naturally — Stick builds as you talk</small>
+            </span>
+            <span class="btn-start-arrow" aria-hidden="true">→</span>
+          </button>
+
+          <div class="session-debug hidden" id="session-debug" aria-hidden="true"></div>
+          </div>
+        </aside>
+      </main>
+
+      <footer class="status-strip" role="contentinfo" aria-label="System status">
+        <div class="status-item" id="status-connection"><span class="indicator"></span><span>Not connected</span></div>
+        <div class="status-item" id="status-deck"><span class="indicator"></span><span>Deck idle</span></div>
+        <div class="status-item" id="status-generation"><span class="indicator"></span><span>Generation idle</span></div>
+      </footer>
+      </div>
+    </div>
+
+    <script>
+      const ACCENTS = { ember: "accent-ember", lime: "accent-lime", sky: "accent-sky", violet: "accent-violet" };
+      const ACCENT_HEX = { ember: "#292823", lime: "#11110f", sky: "#4e4c46", violet: "#5c5a54" };
+      const PHASE_LABELS = {
+        ready: "Ready to start",
+        connecting: "Connecting…",
+        listening: "LISTENING",
+        thinking: "Structuring…",
+        building: "Composing slide",
+        presenting: "Presenting",
+        disconnected: "Disconnected",
+        error: "Connection issue",
+      };
+      const STAGE_ORDER = ["introduction", "problem", "solution", "architecture", "workflow", "results", "conclusion"];
+      const STAGE_LABELS = {
+        introduction: "Intro",
+        problem: "Problem",
+        solution: "Solution",
+        architecture: "Architecture",
+        workflow: "Workflow",
+        results: "Results",
+        conclusion: "Close",
+        other: "Section",
+      };
+      const STAGE_SUGGESTIONS = {
+        introduction: "Introduce the topic and why it matters.",
+        problem: "Describe the pain point or challenge.",
+        solution: "Explain how your approach solves it.",
+        architecture: "Walk through the system or design.",
+        workflow: "Explain the step-by-step flow.",
+        results: "Share outcomes, metrics, or impact.",
+        conclusion: "Summarize and land the key takeaway.",
+        other: "Continue building this section before moving on.",
+      };
+      const VIDEO_LABELS = {
+        idle: { title: "Video ready to build", detail: "Generate MP4 from your deck" },
+        planning: { title: "Planning media…", detail: "Analyzing scenes for video" },
+        generating_media: { title: "Generating visuals…", detail: "Creating images and narration" },
+        synthesizing_audio: { title: "Generating narration…", detail: "Synthesizing voice audio" },
+        composing: { title: "Composing timeline…", detail: "Aligning slides and audio" },
+        rendering: { title: "Rendering video…", detail: "Building your MP4" },
+        ready: { title: "Video ready", detail: "Download your presentation video" },
+        error: { title: "Video unavailable", detail: "PowerPoint export is still available" },
+        unavailable: { title: "Multimedia unavailable", detail: "Add GEMINI_API_KEY to enable video" },
+      };
+      const GENERATION_LABELS = {
+        idle: { title: "Finish your presentation to export", detail: "PowerPoint generates automatically as you speak", status: "idle" },
+        generating: { title: "Building deck…", detail: "Exporting slides to PowerPoint", status: "building" },
+        validating: { title: "Validating slides…", detail: "Checking layout quality", status: "building" },
+        ready: { title: "Your deck is ready", detail: "Download your editable PowerPoint", status: "ready" },
+        error: { title: "Export needs attention", detail: "Previous deck may still be available", status: "error" },
+        unavailable: { title: "Export unavailable", detail: "PowerPoint export is not configured", status: "error" },
+      };
+
+      const startButton = document.querySelector("#start");
+      const statusPill = document.querySelector("#status-pill");
+      const headerStatusLabel = document.querySelector("#header-status-label");
+      const connChip = document.querySelector("#conn-chip");
+      const connChipLabel = document.querySelector("#conn-chip-label");
+      const presentBtn = document.querySelector("#present-btn");
+      const directorColumn = document.querySelector("#director-column");
+      const directorToggle = document.querySelector("#director-toggle");
+      const directorBadge = document.querySelector("#director-badge");
+      const directorStatusLine = document.querySelector("#director-status-line");
+      const currentInstruction = document.querySelector("#current-instruction");
+      const deckStructure = document.querySelector("#deck-structure");
+      const activityTimeline = document.querySelector("#activity-timeline");
+      const transcriptElement = document.querySelector("#transcript");
+      const suggestionText = document.querySelector("#suggestion-text");
+      const emptyState = document.querySelector("#empty-state");
+      const emptyTitle = document.querySelector("#empty-title");
+      const emptySub = document.querySelector("#empty-sub");
+      const stageColumn = document.querySelector("#stage-column");
+      const stageShell = document.querySelector("#stage-shell");
+      const stageCanvas = document.querySelector("#stage-canvas");
+      const stageKind = document.querySelector("#stage-kind");
+      const stageMeta = document.querySelector("#stage-meta");
+      const slideNavElement = document.querySelector("#slide-nav");
+      const slideStripEmpty = document.querySelector("#slide-strip-empty");
+      const slideCountLabel = document.querySelector("#slide-count-label");
+      const stageFrame = document.querySelector("#stage-frame");
+      const centerTranscript = document.querySelector("#center-transcript");
+      const outputPptx = document.querySelector("#output-pptx");
+      const outputVideo = document.querySelector("#output-video");
+      const progressFill = document.querySelector("#progress-fill");
+      const progressPercent = document.querySelector("#progress-percent");
+      const progressSlides = document.querySelector("#progress-slides");
+      const progressEta = document.querySelector("#progress-eta");
+      const generationStatus = document.querySelector("#generation-status");
+      const generationDetail = document.querySelector("#generation-detail");
+      const downloadLink = document.querySelector("#download-link");
+      const videoStatusLabel = document.querySelector("#video-status-label");
+      const videoStatusDetail = document.querySelector("#video-status-detail");
+      const videoGenerateBtn = document.querySelector("#video-generate-btn");
+      const videoDownloadLink = document.querySelector("#video-download-link");
+      const videoSpinner = document.querySelector("#video-spinner");
+      const sessionDebug = document.querySelector("#session-debug");
+      const fsControls = document.querySelector("#fs-controls");
+      const fsSlideLabel = document.querySelector("#fs-slide-label");
+      const fsPrevBtn = document.querySelector("#fs-prev-btn");
+      const fsNextBtn = document.querySelector("#fs-next-btn");
+      const fsExitBtn = document.querySelector("#fs-exit-btn");
+
+      const completed = [];
+      const partial = new Map();
+      const processedCallIds = new Set();
+      const RECONNECT_MAX_ATTEMPTS = __RECONNECT_MAX_ATTEMPTS__;
+      const STICK_LOGO_SRC = "/static/stick-logo.svg";
+      let cachedSlides = [];
+      let cachedCoverSlide = null;
+      let activeSlideIndex = -1;
+      let lastRenderedSlideId = null;
+      let lastRenderedBackgroundKey = null;
+      let turnCount = 0;
+      let isLive = false;
+      let isStaging = false;
+      let thinkingUntil = 0;
+      let reconnectAttempts = 0;
+      let reconnectTimer;
+      let activeStream;
+      let dataChannel = null;
+      let sessionId = null;
+      let connectionLabel = "disconnected";
+      let sessionStatus = "created";
+      let generationPhase = "idle";
+      let videoPhase = "idle";
+      let liveImageryPhase = "idle";
+      let generationPollTimer = null;
+      let lastPollMs = 0;
+      let presentationStage = "introduction";
+      let lastErrorMessage = "";
+      let pendingUserTurn = true;
+      const debugMode = new URLSearchParams(location.search).has("debug");
+
+      videoGenerateBtn.addEventListener("click", () => requestVideoGeneration());
+      startButton.addEventListener("click", () => isLive ? stopLive() : startWebRTC());
+      presentBtn.addEventListener("click", toggleFullscreen);
+      fsExitBtn.addEventListener("click", () => document.exitFullscreen?.());
+      fsPrevBtn.addEventListener("click", () => navigateSlide(-1));
+      fsNextBtn.addEventListener("click", () => navigateSlide(1));
+      directorToggle.addEventListener("click", () => {
+        const collapsed = directorColumn.classList.toggle("is-collapsed");
+        directorToggle.setAttribute("aria-expanded", collapsed ? "false" : "true");
+      });
+      window.addEventListener("keydown", handleKeydown);
+      window.addEventListener("beforeunload", () => {
+        if (sessionId) navigator.sendBeacon("/session/disconnect", new Blob([JSON.stringify({ session_id: sessionId })], { type: "application/json" }));
+      });
+      document.addEventListener("fullscreenchange", updateFullscreenUI);
+
+      function defaultCoverPresentation() {
+        return {
+          current_scene: {
+            id: "stick-cover",
+            status: "editing",
+            component: "CoverScene",
+            props: {
+              title: "STICK",
+              subtitle: "Live presentations.",
+              tagline: "Speak. I'll build.",
+              eyebrow: "Stick / Live Creative",
+              accent: "lime",
+              is_cover: true,
+            },
+          },
+          completed_scenes: [],
+          metadata: { presentation_stage: "introduction" },
+        };
+      }
+
+      renderPresentation(defaultCoverPresentation());
+
+      function scheduleGenerationPoll() {
+        if (generationPollTimer) clearInterval(generationPollTimer);
+        const busy = liveImageryPhase === "generating" || ["generating", "validating"].includes(generationPhase);
+        generationPollTimer = setInterval(updateGenerationStatus, busy ? 500 : 1500);
+      }
+
+      createSession().then(async () => {
+        await refreshPresentation();
+        scheduleGenerationPoll();
+        if (window.lucide) {
+          window.lucide.createIcons();
+          window.lucide.createIcons({ root: document.querySelector(".nav-sidebar") });
+          window.lucide.createIcons({ root: document.querySelector("#outputs-panel") });
+        }
+        refreshUI();
+      });
+
+      function handleKeydown(event) {
+        const tag = event.target?.tagName;
+        if (tag === "INPUT" || tag === "TEXTAREA") return;
+        if (event.key === "Escape" && document.fullscreenElement) {
+          document.exitFullscreen?.();
+          return;
+        }
+        if (event.key.toLowerCase() === "f") {
+          event.preventDefault();
+          toggleFullscreen();
+          return;
+        }
+        if (cachedSlides.length > 1 && !document.fullscreenElement) {
+          if (event.key === "ArrowRight") navigateSlide(1);
+          if (event.key === "ArrowLeft") navigateSlide(-1);
+        }
+        if (document.fullscreenElement && cachedSlides.length > 1) {
+          if (event.key === "ArrowRight") navigateSlide(1);
+          if (event.key === "ArrowLeft") navigateSlide(-1);
+        }
+      }
+
+      function navigateSlide(delta) {
+        const next = Math.max(0, Math.min(cachedSlides.length - 1, activeSlideIndex + delta));
+        if (next === activeSlideIndex) return;
+        activeSlideIndex = next;
+        slideNavElement.querySelectorAll(".slide-thumb").forEach((node, i) => node.classList.toggle("is-current", i === next));
+        showSlide(cachedSlides[next], false);
+        updateFullscreenUI();
+        refreshUI();
+      }
+
+      function derivePhase() {
+        if (connectionLabel === "error") return "error";
+        if (connectionLabel === "connecting" || connectionLabel === "reconnecting") return "connecting";
+        if (isStaging) return "building";
+        if (Date.now() < thinkingUntil) return "thinking";
+        if (connectionLabel === "connected" && isLive) {
+          return cachedSlides.length > 0 ? "presenting" : "listening";
+        }
+        if (sessionId && !isLive && connectionLabel !== "error") return "ready";
+        return "disconnected";
+      }
+
+      function friendlyError(message) {
+        const text = String(message || "");
+        if (/api_key|openai|realtime/i.test(text)) return "Stick couldn't connect to the AI service. Check your connection and try again.";
+        if (/microphone|permission|notallowed/i.test(text)) return "Microphone access is required to start presenting.";
+        if (/network|fetch|failed/i.test(text)) return "Connection failed. Check your network and try again.";
+        return "Something went wrong. Please try again.";
+      }
+
+      function refreshUI() {
+        const phase = derivePhase();
+        statusPill.dataset.phase = phase;
+        headerStatusLabel.textContent = PHASE_LABELS[phase] || phase;
+
+        updateConnChip(phase);
+        presentBtn.disabled = cachedSlides.length === 0;
+
+        directorBadge.textContent = isLive ? "Live" : "Standby";
+        directorBadge.classList.toggle("is-live", isLive);
+
+        directorStatusLine.className = "director-status-line";
+        if (phase === "listening") directorStatusLine.textContent = "Listening — I'll structure as you speak…";
+        else if (phase === "thinking") { directorStatusLine.textContent = "Organizing your idea into the deck…"; directorStatusLine.classList.add("thinking"); }
+        else if (phase === "building") { directorStatusLine.textContent = "Composing the slide layout…"; directorStatusLine.classList.add("building"); }
+        else if (phase === "presenting") {
+          const stageLabel = STAGE_LABELS[presentationStage] || "Section";
+          directorStatusLine.textContent = `${stageLabel} · Slide ${activeSlideIndex + 1} of ${cachedSlides.length}`;
+        }
+        else if (phase === "connecting") directorStatusLine.textContent = "Connecting to Stick AI…";
+        else if (phase === "error") directorStatusLine.textContent = friendlyError(lastErrorMessage);
+        else if (cachedCoverSlide && !cachedSlides.length && (phase === "ready" || phase === "listening")) {
+          directorStatusLine.textContent = isLive
+            ? "Just start speaking — your deck will build live."
+            : "Just start speaking and a live presentation will appear.";
+        }
+        else if (phase === "ready") directorStatusLine.textContent = "Ready when you are.";
+        else directorStatusLine.textContent = "Session ended.";
+
+        updateCurrentInstruction();
+        updateDeckStructure();
+        updateEmptyState(phase);
+        updateTimeline(phase);
+        updateProgress();
+        updateSuggestion();
+        updateStatusStrip(phase);
+        updateFullscreenUI();
+        stageShell.classList.toggle("has-slides", cachedSlides.length > 0 || Boolean(cachedCoverSlide));
+        stageColumn.classList.toggle("has-slides", cachedSlides.length > 0 || Boolean(cachedCoverSlide));
+      }
+
+      function updateConnChip(phase) {
+        let state = "idle";
+        let label = "Ready";
+        if (phase === "connecting") { state = "warn"; label = "Connecting"; }
+        else if (phase === "error") { state = "error"; label = "Issue"; }
+        else if (isLive) { state = "live"; label = "Connected"; }
+        else if (sessionId) { state = "ready"; label = "Ready"; }
+        else { state = "idle"; label = "Offline"; }
+        connChip.dataset.state = state;
+        connChipLabel.textContent = label;
+      }
+
+      function slideStageIndex(slide) {
+        const stage = slide?.props?.presentation_stage || slide?.content?.presentation_stage;
+        const idx = STAGE_ORDER.indexOf(stage);
+        return idx >= 0 ? idx : -1;
+      }
+
+      function updateDeckStructure() {
+        const label = deckStructure.querySelector(".deck-structure-label");
+        deckStructure.replaceChildren(label);
+        const currentIdx = STAGE_ORDER.indexOf(presentationStage);
+
+        let highestUsedIdx = -1;
+        cachedSlides.forEach(slide => {
+          const idx = slideStageIndex(slide);
+          if (idx > highestUsedIdx) highestUsedIdx = idx;
+        });
+
+        const anchorIdx = Math.max(currentIdx, highestUsedIdx, 0);
+        const visibleEnd = cachedSlides.length === 0 && currentIdx < 0
+          ? 0
+          : Math.min(anchorIdx + 1, STAGE_ORDER.length - 1);
+
+        for (let index = 0; index <= visibleEnd; index += 1) {
+          const stage = STAGE_ORDER[index];
+          const chip = document.createElement("span");
+          chip.className = "deck-stage";
+          chip.textContent = STAGE_LABELS[stage];
+          if (currentIdx >= 0 && index < currentIdx) chip.classList.add("is-done");
+          else if (index < anchorIdx) chip.classList.add("is-done");
+          else if (stage === presentationStage || index === currentIdx || (currentIdx < 0 && index === 0 && !cachedSlides.length)) chip.classList.add("is-current");
+          else if (index === visibleEnd && index > anchorIdx) chip.classList.add("is-next");
+          else if (currentIdx >= 0 && index > currentIdx) chip.classList.add("is-next");
+          deckStructure.append(chip);
+        }
+      }
+
+      function syncPresentationMeta(presentation) {
+        const metadata = presentation.metadata || {};
+        if (metadata.presentation_stage) presentationStage = metadata.presentation_stage;
+      }
+
+      function updateCurrentInstruction() {
+        const latest = [...completed].at(-1) || "";
+        const partialText = [...partial.values()].join(" ").trim();
+        const text = partialText || latest;
+        const transcriptText = text || (isLive ? "Listening…" : "Start speaking to build your deck.");
+        transcriptElement.textContent = transcriptText.length > 220 ? `${transcriptText.slice(0, 217)}…` : transcriptText;
+        centerTranscript.classList.toggle("has-content", Boolean(text));
+        if (text) {
+          currentInstruction.textContent = text.length > 120 ? `${text.slice(0, 117)}…` : text;
+          currentInstruction.classList.remove("is-empty");
+        } else if (isLive) {
+          currentInstruction.textContent = "Listening…";
+          currentInstruction.classList.add("is-empty");
+        } else if (cachedCoverSlide && !cachedSlides.length) {
+          currentInstruction.textContent = isLive
+            ? "Listening for your first idea…"
+            : "Just start speaking and a live presentation will be created.";
+          currentInstruction.classList.add("is-empty");
+        } else {
+          currentInstruction.textContent = "Waiting for your first idea…";
+          currentInstruction.classList.add("is-empty");
+        }
+      }
+
+      function updateEmptyState(phase) {
+        const hasSlides = cachedSlides.length > 0;
+        const showCover = Boolean(cachedCoverSlide) && !hasSlides;
+        emptyState.classList.toggle("hidden", hasSlides || showCover);
+        if (hasSlides || showCover) return;
+
+        const mode = phase === "listening" ? "listening" : phase === "thinking" ? "thinking" : phase === "building" ? "building" : "idle";
+        emptyState.dataset.mode = mode;
+        document.querySelector("#empty-hint")?.classList.toggle("hidden", mode !== "idle" && mode !== "ready");
+
+        if (phase === "listening") {
+          emptyTitle.textContent = "Listening…";
+          emptySub.textContent = "Speak in complete sections — Stick builds a structured deck.";
+        } else if (phase === "thinking") {
+          emptyTitle.textContent = "Structuring…";
+          emptySub.textContent = "Organizing your idea into the presentation narrative.";
+        } else if (phase === "building") {
+          emptyTitle.textContent = "Composing slide…";
+          emptySub.textContent = "Refining layout and content for this section.";
+        } else if (phase === "ready") {
+          emptyTitle.textContent = "Speak. I'll build.";
+          emptySub.textContent = "Start with your introduction. Stick follows a clear narrative arc.";
+        } else {
+          emptyTitle.textContent = "Speak. I'll build.";
+          emptySub.textContent = "Start a live presentation to begin building your deck.";
+        }
+      }
+
+      function updateTimeline(phase) {
+        const hasTranscript = completed.length > 0;
+        const hasSlides = cachedSlides.length > 0;
+        const deckBusy = ["generating", "validating"].includes(generationPhase);
+        const deckReady = generationPhase === "ready";
+        const videoBusy = ["planning", "generating_media", "synthesizing_audio", "composing", "rendering"].includes(videoPhase);
+        const videoReady = videoPhase === "ready";
+
+        const imageryBusy = liveImageryPhase === "generating";
+        const imageryReady = liveImageryPhase === "ready" || liveImageryPhase === "done";
+
+        const steps = {
+          understand: hasTranscript ? "done" : (phase === "listening" || phase === "thinking") ? "active" : "",
+          plan: (phase === "thinking" && !isStaging) ? "active" : (isStaging || hasSlides) ? (isStaging ? "" : "done") : "",
+          build: isStaging ? "active" : hasSlides ? "done" : (phase === "building" ? "active" : ""),
+          media: imageryBusy ? "active" : imageryReady ? "done" : (videoBusy && ["generating_media", "synthesizing_audio"].includes(videoPhase) ? "active" : (videoReady || videoBusy) ? "done" : ""),
+          sync: deckReady ? "done" : deckBusy ? "active" : hasSlides ? "" : "",
+          video: videoReady ? "done" : videoBusy ? "active" : "",
+        };
+
+        activityTimeline.querySelectorAll(".timeline-step").forEach(node => {
+          const key = node.dataset.step;
+          node.classList.remove("done", "active");
+          const state = steps[key];
+          if (state) node.classList.add(state);
+          const icon = node.querySelector(".icon");
+          icon.textContent = state === "done" ? "✓" : state === "active" ? "●" : "○";
+        });
+      }
+
+      function updateProgress() {
+        const count = cachedSlides.length;
+        if (count === 0) {
+          progressSlides.textContent = isLive ? "Building as you speak" : "No slides yet";
+        } else if (count === 1) {
+          progressSlides.textContent = "1 slide";
+        } else {
+          progressSlides.textContent = `${count} slides`;
+        }
+
+        let pct = 0;
+        if (Date.now() < thinkingUntil) pct = 12;
+        else if (isStaging) pct = Math.max(pct, count > 0 ? Math.min(68, 20 + count * 9) : 16);
+        else if (isLive && count === 0) pct = 8;
+        else if (count > 0) pct = Math.min(72, 18 + count * 10);
+
+        if (generationPhase === "generating") pct = Math.max(pct, 78);
+        if (generationPhase === "validating") pct = Math.max(pct, 85);
+        if (generationPhase === "ready") pct = Math.max(pct, 92);
+
+        const videoBusy = ["planning", "generating_media", "synthesizing_audio", "composing", "rendering"].includes(videoPhase);
+        if (videoBusy) pct = Math.max(pct, 88);
+        if (videoPhase === "ready") pct = 100;
+
+        progressFill.style.setProperty("--progress", `${pct}%`);
+        progressPercent.textContent = `${pct}%`;
+
+        if (videoBusy) {
+          const est = Math.max(15, count * 8);
+          progressEta.textContent = count > 0 ? `Est. video: ~${est}s` : "Est. video: —";
+        } else if (videoPhase === "ready") {
+          progressEta.textContent = "Video ready";
+        } else if (generationPhase === "ready") {
+          progressEta.textContent = count === 1 ? "1 slide exported" : `${count} slides exported`;
+        } else if (isLive && count === 0) {
+          progressEta.textContent = "Deck grows with your speech";
+        } else if (count > 0) {
+          progressEta.textContent = "Exporting as you go";
+        } else {
+          progressEta.textContent = "Est. time: —";
+        }
+      }
+
+      function updateSuggestion() {
+        if (!isLive) {
+          suggestionText.textContent = "Start with your introduction — what is this presentation about?";
+          return;
+        }
+        if (cachedSlides.length === 0) {
+          suggestionText.textContent = STAGE_SUGGESTIONS.introduction;
+          return;
+        }
+        const nextStage = STAGE_ORDER[Math.min(STAGE_ORDER.indexOf(presentationStage) + 1, STAGE_ORDER.length - 1)] || presentationStage;
+        const hint = STAGE_SUGGESTIONS[presentationStage] || STAGE_SUGGESTIONS.other;
+        if (cachedSlides.length >= 2 && STAGE_ORDER.indexOf(nextStage) > STAGE_ORDER.indexOf(presentationStage)) {
+          suggestionText.textContent = `Finish ${STAGE_LABELS[presentationStage].toLowerCase()}, then move to ${STAGE_LABELS[nextStage].toLowerCase()}.`;
+          return;
+        }
+        suggestionText.textContent = hint;
+      }
+
+      function updateStatusStrip(phase) {
+        setStatusItem("status-connection", phase === "connecting" ? "Connecting" : isLive ? "Live" : sessionId ? "Ready" : "Not connected", isLive ? "is-active" : phase === "connecting" ? "is-warn" : sessionId ? "is-ready" : "");
+        const deckMap = { idle: ["Deck idle", ""], generating: ["Building deck", "is-warn"], validating: ["Validating", "is-warn"], ready: ["Deck synced", "is-ready"], error: ["Deck issue", "is-error"], unavailable: ["Export off", ""] };
+        const [deckLabel, deckClass] = deckMap[generationPhase] || deckMap.idle;
+        setStatusItem("status-deck", deckLabel, deckClass);
+        const genActive = ["generating", "validating"].includes(generationPhase) || ["planning", "generating_media", "synthesizing_audio", "composing", "rendering"].includes(videoPhase);
+        setStatusItem("status-generation", genActive ? "Generation active" : videoPhase === "ready" ? "Generation done" : "Generation idle", genActive ? "is-active" : videoPhase === "ready" || generationPhase === "ready" ? "is-ready" : "");
+      }
+
+      function setStatusItem(id, label, stateClass) {
+        const node = document.getElementById(id);
+        if (!node) return;
+        node.className = `status-item ${stateClass}`.trim();
+        node.querySelector("span:last-child").textContent = label;
+      }
+
+      function setConnection(state, label) {
+        connectionLabel = state;
+        if (state === "error") lastErrorMessage = label;
+        refreshUI();
+      }
+
+      function stopLive() {
+        isLive = false;
+        isStaging = false;
+        if (activeStream) activeStream.getTracks().forEach(track => track.stop());
+        activeStream = null;
+        dataChannel = null;
+        startButton.classList.remove("is-live");
+        startButton.querySelector("strong").textContent = "Start live presentation";
+        startButton.querySelector("small").textContent = "Speak naturally — Stick builds as you talk";
+        startButton.querySelector(".btn-start-icon").innerHTML = '<i data-lucide="mic"></i>';
+        startButton.disabled = false;
+        mountIcons(startButton);
+        setConnection("disconnected", "Disconnected");
+      }
+
+      function fitWords(text, maxWords) {
+        const words = String(text || "").trim().split(/\s+/).filter(Boolean);
+        return words.length <= maxWords ? words.join(" ") : words.slice(0, maxWords).join(" ");
+      }
+
+      function fitSceneProps(props) {
+        const cardItems = (props.card_items?.length ? props.card_items : (props.cards || []).map(title => ({ title, body: "", icon: "sparkles" })))
+          .slice(0, 4)
+          .map((card, index) => ({
+            title: fitWords(card.title || `Point ${index + 1}`, 5),
+            body: fitWords(card.body || "", 20),
+            icon: card.icon || "sparkles",
+          }));
+        return {
+          ...props,
+          eyebrow: fitWords(props.eyebrow || "", 6),
+          title: fitWords(props.title || "New idea", 8),
+          subtitle: fitWords(props.subtitle || "", 22),
+          accent: ACCENTS[props.accent] ? props.accent : "sky",
+          icon: props.icon || "sparkles",
+          card_items: cardItems,
+          cards: cardItems.map(card => card.body ? `${card.title}: ${card.body}` : card.title),
+        };
+      }
+
+      function stickLogoImg(className, size) {
+        const img = document.createElement("img");
+        img.className = className;
+        img.src = STICK_LOGO_SRC;
+        img.alt = "";
+        img.width = size;
+        img.height = size;
+        img.setAttribute("aria-hidden", "true");
+        return img;
+      }
+
+      function buildStickWordmark(title) {
+        const label = (title || "STICK").trim();
+        const suffix = label.toUpperCase().startsWith("S") ? label.slice(1) : label;
+        const h1 = document.createElement("h1");
+        h1.className = "cover-title";
+        const word = document.createElement("span");
+        word.className = "cover-title-word";
+        word.append(stickLogoImg("cover-title-logo", 48), document.createTextNode(suffix));
+        h1.append(word);
+        return h1;
+      }
+
+      function icon(name) {
+        const node = document.createElement("i");
+        node.dataset.lucide = name || "sparkles";
+        return node;
+      }
+
+      function mountIcons(root = document) {
+        if (window.lucide) window.lucide.createIcons({ attrs: { "stroke-width": 1.75 }, nameAttr: "data-lucide", root });
+      }
+
+      async function createSession() {
+        const browserLanguage = (navigator.language || "en").toLowerCase();
+        const response = await fetch("/session", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ output_language: browserLanguage }),
+        });
+        if (!response.ok) throw new Error("Could not create presentation session");
+        const payload = await response.json();
+        sessionId = payload.session_id;
+        sessionStatus = payload.session?.status || "created";
+        updateSessionDebug(payload.session);
+        setConnection("disconnected", "Ready");
+        if (payload.presentation) renderPresentation(payload.presentation);
+      }
+
+      function updateSessionDebug(session) {
+        if (!debugMode || !session) {
+          sessionDebug.classList.add("hidden");
+          return;
+        }
+        sessionDebug.classList.remove("hidden");
+        sessionDebug.textContent = `Session ${sessionId?.slice(0, 8)}… · ${session.status} · ${session.connection_status}`;
+      }
+
+      async function startWebRTC() {
+        if (!sessionId) await createSession();
+        isLive = true;
+        startButton.disabled = true;
+        startButton.querySelector("strong").textContent = "Starting…";
+        setConnection("connecting", "Connecting");
+        try {
+          const peerConnection = new RTCPeerConnection();
+          const audioStream = activeStream || await navigator.mediaDevices.getUserMedia({ audio: true });
+          activeStream = audioStream;
+          audioStream.getTracks().forEach(track => peerConnection.addTrack(track, audioStream));
+
+          dataChannel = peerConnection.createDataChannel("oai-events");
+          dataChannel.addEventListener("message", event => handleRealtimeEvent(JSON.parse(event.data)));
+          dataChannel.addEventListener("close", () => scheduleReconnect("Data channel closed"));
+          dataChannel.addEventListener("error", () => scheduleReconnect("Data channel error"));
+          peerConnection.addEventListener("connectionstatechange", () => {
+            if (["failed", "closed", "disconnected"].includes(peerConnection.connectionState)) {
+              scheduleReconnect(`Connection ${peerConnection.connectionState}`);
+            }
+          });
+
+          const offer = await peerConnection.createOffer();
+          await peerConnection.setLocalDescription(offer);
+          const answer = await fetch("/realtime/session", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ sdp: offer.sdp, session_id: sessionId }),
+          });
+          if (!answer.ok) {
+            const err = await answer.json().catch(() => ({}));
+            throw new Error(err.error?.message || "Realtime session failed");
+          }
+          await peerConnection.setRemoteDescription({ type: "answer", sdp: await answer.text() });
+          reconnectAttempts = 0;
+          startButton.classList.add("is-live");
+          startButton.querySelector("strong").textContent = "Stop presentation";
+          startButton.querySelector("small").textContent = "Tap to end listening";
+          startButton.querySelector(".btn-start-icon").innerHTML = '<i data-lucide="square"></i>';
+          startButton.disabled = false;
+          mountIcons(startButton);
+          setConnection("connected", "Live");
+        } catch (error) {
+          isLive = false;
+          startButton.disabled = false;
+          startButton.querySelector("strong").textContent = "Start live presentation";
+          lastErrorMessage = error.message;
+          setConnection("error", error.message);
+        }
+      }
+
+      function scheduleReconnect(reason) {
+        clearTimeout(reconnectTimer);
+        if (!isLive) return;
+        setConnection("reconnecting", "Reconnecting");
+        dataChannel = null;
+        if (reconnectAttempts >= RECONNECT_MAX_ATTEMPTS) {
+          lastErrorMessage = reason;
+          setConnection("error", reason);
+          startButton.disabled = false;
+          isLive = false;
+          startButton.classList.remove("is-live");
+          startButton.querySelector("strong").textContent = "Start live presentation";
+          return;
+        }
+        reconnectAttempts += 1;
+        reconnectTimer = setTimeout(() => startWebRTC(), 500 * (2 ** (reconnectAttempts - 1)));
+      }
+
+      function handleRealtimeEvent(event) {
+        if (event.type === "error") {
+          lastErrorMessage = event.error?.message || "Realtime error";
+          setConnection("error", lastErrorMessage);
+          return;
+        }
+        if (event.type === "conversation.item.input_audio_transcription.delta") {
+          partial.set(event.item_id, (partial.get(event.item_id) || "") + event.delta);
+          renderTranscript();
+        }
+        if (event.type === "conversation.item.input_audio_transcription.completed") {
+          partial.delete(event.item_id);
+          completed.push(event.transcript);
+          turnCount += 1;
+          pendingUserTurn = true;
+          thinkingUntil = Date.now() + THINKING_MS;
+          renderTranscript();
+          refreshUI();
+        }
+        if (event.type === "response.function_call_arguments.done" && event.name === "stage_scene") {
+          handleStageSceneCall(event.call_id, event.arguments);
+        }
+        if (event.type === "response.done" && event.response?.output) {
+          for (const item of event.response.output) {
+            if (item.type === "function_call" && item.name === "stage_scene" && item.arguments) {
+              handleStageSceneCall(item.call_id, item.arguments);
+            }
+          }
+        }
+      }
+
+      async function handleStageSceneCall(callId, rawArguments) {
+        if (processedCallIds.has(callId)) return;
+        processedCallIds.add(callId);
+        let sceneUpdate;
+        try {
+          sceneUpdate = typeof rawArguments === "string" ? JSON.parse(rawArguments) : rawArguments;
+        } catch {
+          acknowledgeToolCall(callId, { success: false, reason: "Invalid scene arguments" });
+          return;
+        }
+        if (sceneUpdate.action === "hold") {
+          thinkingUntil = 0;
+          acknowledgeToolCall(callId, { success: true, held: true, scene_updated: false });
+          refreshUI();
+          return;
+        }
+        if (!pendingUserTurn && cachedSlides.length > 0) {
+          acknowledgeToolCall(callId, { success: true, held: true, scene_updated: false, reason: "No new speech turn." });
+          refreshUI();
+          return;
+        }
+        isStaging = true;
+        thinkingUntil = 0;
+        refreshUI();
+        try {
+          const response = await fetch("/scene", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ session_id: sessionId, scene_update: sceneUpdate, call_id: callId }),
+          });
+          const result = await response.json();
+          if (result.success && !result.held) {
+            pendingUserTurn = false;
+            await refreshPresentation(true);
+          }
+          acknowledgeToolCall(callId, result);
+          updateGenerationStatus();
+        } catch (error) {
+          lastErrorMessage = error.message;
+        } finally {
+          isStaging = false;
+          refreshUI();
+        }
+      }
+
+      function acknowledgeToolCall(callId, result) {
+        if (!dataChannel || dataChannel.readyState !== "open") return;
+        dataChannel.send(JSON.stringify({
+          type: "conversation.item.create",
+          item: { type: "function_call_output", call_id: callId, output: JSON.stringify(result) },
+        }));
+        // Do NOT send response.create here — server VAD will start the next turn only when the user speaks again.
+      }
+
+      function renderTranscript() {
+        const latest = [...completed].at(-1) || "";
+        const partialText = [...partial.values()].join(" ").trim();
+        const displayText = partialText || latest;
+        const snippet = displayText.length > 180 ? `${displayText.slice(0, 177)}…` : displayText;
+        transcriptElement.textContent = snippet || "Start speaking to build your deck.";
+        transcriptElement.classList.toggle("is-partial", partial.size > 0);
+        updateCurrentInstruction();
+        refreshUI();
+      }
+
+      async function refreshPresentation(jumpToLatest = false) {
+        if (!sessionId) return;
+        const response = await fetch(`/presentation?session_id=${encodeURIComponent(sessionId)}`);
+        if (!response.ok) return;
+        renderPresentation(await response.json(), jumpToLatest);
+      }
+
+      function coverFromPresentation(presentation) {
+        const current = presentation.current_scene;
+        if (current?.props?.is_cover || current?.component === "CoverScene") return current;
+        return null;
+      }
+
+      function slidesFromPresentation(presentation) {
+        const slides = [...(presentation.completed_scenes || [])];
+        if (presentation.current_scene && !presentation.current_scene.props?.is_cover) {
+          slides.push(presentation.current_scene);
+        }
+        return slides;
+      }
+
+      function sceneStatusLabel(status) {
+        if (status === "completed") return "✓ Ready";
+        if (status === "editing") return "● Building";
+        if (status === "failed") return "⚠ Needs attention";
+        return "✓ Ready";
+      }
+
+      function buildThumbPreview(slide) {
+        const wrap = document.createElement("div");
+        wrap.className = "mini-scene";
+        try {
+          const layer = renderSceneFromModel(slide);
+          layer.classList.remove("is-entering", "is-updating");
+          wrap.append(layer);
+          const scale = 128 / 960;
+          wrap.style.transform = `scale(${scale})`;
+          wrap.style.width = "960px";
+          wrap.style.height = "540px";
+          mountIcons(wrap);
+        } catch {
+          wrap.style.background = `linear-gradient(135deg, ${ACCENT_HEX[slide.props?.accent] || ACCENT_HEX.lime}22, transparent)`;
+        }
+        return wrap;
+      }
+
+      function renderPresentation(presentation, jumpToLatest = false) {
+        syncPresentationMeta(presentation);
+        const slides = slidesFromPresentation(presentation);
+        cachedCoverSlide = coverFromPresentation(presentation);
+        cachedSlides = slides;
+        slideCountLabel.textContent = `${slides.length} scene${slides.length === 1 ? "" : "s"}`;
+
+        if (!slides.length) {
+          slideNavElement.replaceChildren(slideStripEmpty);
+          slideStripEmpty.classList.remove("hidden");
+          if (cachedCoverSlide) {
+            showCoverSlide(cachedCoverSlide, jumpToLatest);
+          } else {
+            stageKind.textContent = "Live canvas";
+            stageMeta.textContent = "16:9 · Awaiting speech";
+            stageCanvas.querySelectorAll(".scene-layer").forEach(node => node.remove());
+          }
+          refreshUI();
+          return;
+        }
+
+        slideStripEmpty.classList.add("hidden");
+        if (jumpToLatest || activeSlideIndex < 0 || activeSlideIndex >= slides.length) activeSlideIndex = slides.length - 1;
+
+        slideNavElement.replaceChildren(...slides.map((slide, index) => {
+          const button = document.createElement("button");
+          const isGenerating = slide.status === "editing";
+          button.type = "button";
+          button.className = `slide-thumb ${index === activeSlideIndex ? "is-current" : ""} ${isGenerating ? "is-generating" : ""}`.trim();
+          button.setAttribute("role", "tab");
+          button.setAttribute("aria-selected", index === activeSlideIndex ? "true" : "false");
+          button.setAttribute("aria-label", `Slide ${index + 1}: ${slide.props?.title || "Untitled"}`);
+          button.style.setProperty("--thumb-accent", ACCENT_HEX[slide.props?.accent] || ACCENT_HEX.lime);
+
+          const preview = document.createElement("div");
+          preview.className = "slide-thumb-preview";
+          preview.append(buildThumbPreview(slide));
+
+          const meta = document.createElement("div");
+          meta.className = "slide-thumb-meta";
+          meta.innerHTML = `<span>${String(index + 1).padStart(2, "0")}</span>`;
+          const status = document.createElement("span");
+          status.className = "slide-thumb-status";
+          status.dataset.status = slide.status || "completed";
+          status.textContent = sceneStatusLabel(slide.status);
+          meta.append(status);
+
+          const title = document.createElement("div");
+          title.className = "slide-thumb-title";
+          title.textContent = slide.props?.title || `Slide ${index + 1}`;
+
+          button.append(preview, title, meta);
+          button.addEventListener("click", () => {
+            activeSlideIndex = index;
+            slideNavElement.querySelectorAll(".slide-thumb").forEach((node, i) => {
+              node.classList.toggle("is-current", i === index);
+              node.setAttribute("aria-selected", i === index ? "true" : "false");
+            });
+            showSlide(cachedSlides[index], false);
+            refreshUI();
+          });
+          return button;
+        }));
+
+        showSlide(slides[activeSlideIndex], jumpToLatest);
+        refreshUI();
+      }
+
+      function showCoverSlide(slide, animate) {
+        const isNewSlide = slide.id !== lastRenderedSlideId;
+        lastRenderedSlideId = slide.id;
+        const layer = renderSceneFromModel(slide);
+        layer.classList.add(isNewSlide && animate ? "is-entering" : "is-updating");
+        stageCanvas.querySelectorAll(".scene-layer").forEach(node => node.remove());
+        stageCanvas.append(layer);
+        mountIcons(layer);
+        stageKind.textContent = "Stick cover";
+        stageMeta.textContent = isLive ? "16:9 · Listening" : "16:9 · Awaiting speech";
+      }
+
+      function showSlide(slide, animate) {
+        const backgroundKey = `${slide.props?.background_image_url || ""}:${slide.props?.background_status || ""}:${slide.props?.hero_image_url || ""}:${slide.props?.hero_image_status || ""}`;
+        const isNewSlide = slide.id !== lastRenderedSlideId;
+        const backgroundChanged = backgroundKey !== lastRenderedBackgroundKey;
+        if (!isNewSlide && !backgroundChanged && stageCanvas.querySelector(".scene-layer")) {
+          return;
+        }
+        lastRenderedSlideId = slide.id;
+        lastRenderedBackgroundKey = backgroundKey;
+        const layer = renderSceneFromModel(slide);
+        layer.classList.add(isNewSlide && animate ? "is-entering" : "is-updating");
+        stageCanvas.querySelectorAll(".scene-layer").forEach(node => node.remove());
+        stageCanvas.append(layer);
+        mountIcons(layer);
+        const kind = (slide.component || "HeroScene").replace("Scene", "");
+        const stageLabel = STAGE_LABELS[presentationStage] || "Section";
+        stageKind.textContent = `${stageLabel} · ${kind}`;
+        stageMeta.textContent = `16:9 · Slide ${String(activeSlideIndex + 1).padStart(2, "0")} of ${String(cachedSlides.length).padStart(2, "0")}`;
+      }
+
+      async function requestVideoGeneration() {
+        if (!sessionId) return;
+        videoGenerateBtn.disabled = true;
+        try {
+          await fetch("/presentation/video/generate", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ session_id: sessionId }),
+          });
+        } catch (_) {}
+        videoGenerateBtn.disabled = false;
+        updateGenerationStatus();
+      }
+
+      async function updateGenerationStatus() {
+        if (!sessionId) return;
+        const started = performance.now();
+        const response = await fetch(`/presentation?session_id=${encodeURIComponent(sessionId)}`);
+        lastPollMs = Math.round(performance.now() - started);
+        if (!response.ok) return;
+        const presentation = await response.json();
+        const session = presentation.session || {};
+        sessionStatus = session.status || sessionStatus;
+        updateSessionDebug(session);
+        syncPresentationMeta(presentation);
+        renderPresentation(presentation);
+
+        const generation = presentation.generation || {};
+        generationPhase = generation.status || "idle";
+        const info = GENERATION_LABELS[generationPhase] || GENERATION_LABELS.idle;
+        generationStatus.textContent = generation.status === "ready" ? "Ready" : generation.status === "generating" || generation.status === "validating" ? "Generating…" : info.title;
+        generationDetail.textContent = generation.message || info.detail;
+
+        const pptReady = generation.status === "ready" || (generation.status === "error" && generation.artifact_path);
+        outputPptx.dataset.status = pptReady ? "ready" : ["generating", "validating"].includes(generationPhase) ? "generating" : generationPhase === "error" ? "error" : "idle";
+        if (pptReady) downloadLink.href = `/presentation/download?session_id=${encodeURIComponent(sessionId)}`;
+
+        const video = presentation.video || {};
+        videoPhase = video.status || "idle";
+        const videoInfo = VIDEO_LABELS[videoPhase] || VIDEO_LABELS.idle;
+
+        const liveImagery = presentation.live_imagery || {};
+        if (!liveImagery.gemini_configured) {
+          liveImageryPhase = "unavailable";
+        } else if (liveImagery.generating) {
+          liveImageryPhase = "generating";
+        } else if (liveImagery.last_error) {
+          liveImageryPhase = "error";
+        } else if (liveImagery.ready_count > 0) {
+          liveImageryPhase = "ready";
+        } else {
+          liveImageryPhase = "idle";
+        }
+
+        if (liveImageryPhase === "generating") {
+          videoStatusLabel.textContent = "Generating visual…";
+          videoStatusDetail.textContent = "Creating Gemini panel visuals for slides";
+        } else if (liveImageryPhase === "ready" && liveImagery.ready_count > 0) {
+          videoStatusLabel.textContent = video.status === "ready" ? "Ready" : videoBusyLabel(videoPhase) || "Backgrounds ready";
+          videoStatusDetail.textContent = `${liveImagery.ready_count} slide background${liveImagery.ready_count === 1 ? "" : "s"} applied`;
+        } else if (liveImageryPhase === "unavailable") {
+          videoStatusLabel.textContent = "Backgrounds unavailable";
+          videoStatusDetail.textContent = "Add GEMINI_API_KEY for live slide backgrounds";
+        } else if (liveImageryPhase === "error") {
+          videoStatusLabel.textContent = "Background error";
+          videoStatusDetail.textContent = liveImagery.last_error || "Background generation failed";
+        } else {
+          videoStatusLabel.textContent = video.status === "ready" ? "Ready" : videoBusyLabel(videoPhase) || videoInfo.title;
+          videoStatusDetail.textContent = video.message || videoInfo.detail;
+        }
+        const videoReady = video.status === "ready" && video.artifact_path;
+        const videoBusy = ["planning", "generating_media", "synthesizing_audio", "composing", "rendering"].includes(videoPhase);
+        outputVideo.dataset.status = videoReady ? "ready" : videoBusy ? "generating" : videoPhase === "error" ? "error" : videoPhase === "unavailable" ? "error" : "idle";
+        videoSpinner.classList.toggle("hidden", !videoBusy);
+        videoGenerateBtn.style.display = pptReady && !videoReady && !videoBusy && video.gemini_configured !== false ? "inline" : "none";
+        videoGenerateBtn.disabled = videoBusy;
+        videoGenerateBtn.textContent = videoBusy ? "Generating…" : "Generate";
+        if (videoReady) videoDownloadLink.href = `/presentation/video/download?session_id=${encodeURIComponent(sessionId)}`;
+        if (window.lucide) window.lucide.createIcons({ root: document.querySelector("#outputs-panel") });
+        scheduleGenerationPoll();
+        refreshUI();
+      }
+
+      function videoBusyLabel(phase) {
+        const labels = {
+          planning: "Planning…",
+          generating_media: "Generating…",
+          synthesizing_audio: "Narration…",
+          composing: "Composing…",
+          rendering: "Rendering…",
+        };
+        return labels[phase] || "";
+      }
+
+      function toggleFullscreen() {
+        if (!document.fullscreenElement) stageFrame.requestFullscreen?.();
+        else document.exitFullscreen?.();
+      }
+
+      function updateFullscreenUI() {
+        const inFs = Boolean(document.fullscreenElement);
+        fsControls.style.display = inFs ? "flex" : "none";
+        const multi = cachedSlides.length > 1;
+        fsPrevBtn.disabled = !multi || activeSlideIndex <= 0;
+        fsNextBtn.disabled = !multi || activeSlideIndex >= cachedSlides.length - 1;
+        if (cachedSlides.length) {
+          fsSlideLabel.textContent = `Slide ${activeSlideIndex + 1} / ${cachedSlides.length}`;
+        }
+        if (inFs && window.lucide) window.lucide.createIcons({ root: fsControls });
+      }
+
+      function renderSceneFromModel(scene) {
+        const components = { CoverScene, HeroScene, CardsScene, PipelineScene, QuoteScene, MetricScene };
+        return components[scene.component](fitSceneProps(scene.props || {}));
+      }
+
+      function sceneLayer(props) {
+        const layer = document.createElement("article");
+        const imageryClass = props.hero_image_status === "generating" ? "is-imagery-pending" : "";
+        layer.className = `scene-layer scene-editorial ${ACCENTS[props.accent] || "accent-sky"} ${imageryClass}`.trim();
+        const noise = document.createElement("div");
+        noise.className = "scene-noise";
+        const content = document.createElement("div");
+        content.className = "scene-content";
+        layer.append(noise, content);
+        if (props.eyebrow) {
+          const eyebrow = document.createElement("p");
+          eyebrow.className = "scene-eyebrow";
+          eyebrow.textContent = props.eyebrow;
+          content.append(eyebrow);
+        }
+        layer._content = content;
+        return layer;
+      }
+
+      function wrapSceneLayout(props, contentNode) {
+        const strategy = props.visual_strategy || "hero_split_visual";
+        const layer = sceneLayer(props);
+        if (strategy === "hero_visual_focus") {
+          const wrap = document.createElement("div");
+          wrap.className = "layout-visual-focus";
+          wrap.append(buildHeroVisual(props), contentNode);
+          layer._content.append(wrap);
+        } else if (strategy === "cards_full_width" || strategy === "architecture_diagram" || strategy === "pipeline_horizontal" || strategy === "metrics_dashboard") {
+          const wrap = document.createElement("div");
+          wrap.className = "layout-full-width";
+          wrap.append(contentNode);
+          layer._content.append(wrap);
+        } else if (strategy === "cards_with_small_visual") {
+          const wrap = document.createElement("div");
+          wrap.className = "layout-small-visual";
+          const visual = buildHeroVisual(props);
+          visual.classList.add("hero-visual-small");
+          wrap.append(contentNode, visual);
+          layer._content.append(wrap);
+        } else if (strategy === "quote_typography") {
+          const wrap = document.createElement("div");
+          wrap.className = "layout-quote";
+          wrap.append(contentNode);
+          layer._content.append(wrap);
+        } else {
+          layer._content.append(buildEditorialLayout(contentNode, props));
+        }
+        return layer;
+      }
+
+      function buildArchitectureDiagram(props) {
+        const labels = (props.card_items || []).map(c => c.title).filter(Boolean);
+        const nodes = labels.length ? labels : ["Browser", "Realtime", "Orchestrator", "State Manager", "PPT Generator", "PPTX"];
+        const stack = document.createElement("div");
+        stack.className = "arch-stack";
+        nodes.slice(0, 6).forEach((label, index) => {
+          stack.append(Object.assign(document.createElement("div"), { className: "arch-node", textContent: label }));
+          if (index < nodes.length - 1) stack.append(Object.assign(document.createElement("div"), { className: "arch-arrow" }));
+        });
+        return stack;
+      }
+
+      function buildPipelineRow(props) {
+        const items = props.card_items || [];
+        const row = document.createElement("div");
+        row.className = "pipe-row";
+        (items.length ? items : [{ title: "Input" }, { title: "Plan" }, { title: "Build" }, { title: "Export" }]).slice(0, 5).forEach((item, index, arr) => {
+          const node = document.createElement("div");
+          node.className = "pipe-node";
+          node.append(
+            Object.assign(document.createElement("div"), { className: "pipe-dot", textContent: String(index + 1) }),
+            Object.assign(document.createElement("strong"), { textContent: item.title || `Step ${index + 1}` }),
+          );
+          row.append(node);
+          if (index < arr.length - 1) row.append(Object.assign(document.createElement("div"), { className: "pipe-connector" }));
+        });
+        return row;
+      }
+
+      function buildMetricsRow(props) {
+        const row = document.createElement("div");
+        row.className = "metrics-row";
+        (props.metrics || [{ value: "—", label: "METRIC" }]).slice(0, 4).forEach(metric => {
+          const card = document.createElement("div");
+          card.className = "metric-card";
+          card.append(
+            Object.assign(document.createElement("div"), { className: "metric-value", textContent: metric.value || "—" }),
+            Object.assign(document.createElement("p"), { className: "metric-label", textContent: metric.label || "" }),
+          );
+          row.append(card);
+        });
+        return row;
+      }
+
+      function buildEditorialLayout(leftNode, props) {
+        const layout = document.createElement("div");
+        layout.className = "editorial-layout";
+        layout.append(leftNode, buildHeroVisual(props));
+        return layout;
+      }
+
+      function buildSubtitleRow(subtitle) {
+        const subtitleRow = document.createElement("div");
+        subtitleRow.className = "hero-subtitle-row";
+        subtitleRow.append(
+          Object.assign(document.createElement("span"), { className: "hero-subtitle-dot" }),
+          Object.assign(document.createElement("p"), { className: "scene-subtitle", textContent: subtitle }),
+        );
+        return subtitleRow;
+      }
+
+      function CoverScene(props) {
+        const layer = document.createElement("article");
+        layer.className = "scene-layer scene-cover accent-lime";
+        const frame = document.createElement("div");
+        frame.className = "cover-frame";
+        const art = document.createElement("img");
+        art.className = "cover-art";
+        art.src = "/static/welcome-cover.png";
+        art.alt = props.subtitle || "On-the-fly presentations with instant visuals and data cards";
+        const status = document.createElement("p");
+        status.className = `cover-await${isLive ? " is-live" : ""}`.trim();
+        status.textContent = isLive ? "Listening for your first idea…" : (props.tagline || "Start speaking to build your deck");
+        frame.append(art, status);
+        layer.append(frame);
+        return layer;
+      }
+
+      function buildHeroVisual(props) {
+        if (props.needs_gemini_image === false) {
+          const hidden = document.createElement("div");
+          hidden.hidden = true;
+          return hidden;
+        }
+        const visual = document.createElement("div");
+        const pending = props.hero_image_status === "generating";
+        visual.className = `hero-visual${pending ? " is-pending" : ""}`.trim();
+        if (props.hero_image_url) {
+          const img = document.createElement("img");
+          img.src = props.hero_image_url;
+          img.alt = "";
+          visual.append(img);
+        } else if (pending) {
+          /* shimmer placeholder while Gemini generates */
+        } else {
+          const fallback = document.createElement("div");
+          fallback.className = "hero-visual-fallback";
+          fallback.append(icon(props.icon));
+          visual.append(fallback);
+        }
+        return visual;
+      }
+
+      function HeroScene(props) {
+        const copy = document.createElement("div");
+        copy.className = "editorial-copy";
+        copy.append(Object.assign(document.createElement("h2"), { className: "scene-title", textContent: props.title || "Untitled" }));
+        if (props.subtitle) copy.append(buildSubtitleRow(props.subtitle));
+        return wrapSceneLayout(props, copy);
+      }
+
+      function CardsScene(props) {
+        const copy = document.createElement("div");
+        copy.className = "editorial-copy";
+        copy.append(Object.assign(document.createElement("h2"), { className: "scene-title", textContent: props.title || "Key points" }));
+        if (props.subtitle) copy.append(Object.assign(document.createElement("p"), { className: "scene-subtitle", textContent: props.subtitle }));
+        const grid = document.createElement("div");
+        grid.className = "card-grid";
+        (props.card_items || []).forEach(card => {
+          const item = document.createElement("article");
+          item.className = "idea-card";
+          const head = document.createElement("div");
+          head.className = "idea-card-head";
+          head.append(icon(card.icon), Object.assign(document.createElement("h3"), { textContent: card.title }));
+          item.append(head);
+          if (card.body) item.append(Object.assign(document.createElement("p"), { textContent: card.body }));
+          grid.append(item);
+        });
+        copy.append(grid);
+        return wrapSceneLayout(props, copy);
+      }
+
+      function PipelineScene(props) {
+        const copy = document.createElement("div");
+        copy.className = "editorial-copy";
+        copy.append(Object.assign(document.createElement("h2"), { className: "scene-title", textContent: props.title || "Process" }));
+        if (props.subtitle) copy.append(Object.assign(document.createElement("p"), { className: "scene-subtitle", textContent: props.subtitle }));
+        const strategy = props.visual_strategy || "pipeline_horizontal";
+        copy.append(strategy === "architecture_diagram" ? buildArchitectureDiagram(props) : buildPipelineRow(props));
+        return wrapSceneLayout(props, copy);
+      }
+
+      function MetricScene(props) {
+        const copy = document.createElement("div");
+        copy.className = "editorial-copy";
+        copy.append(Object.assign(document.createElement("h2"), { className: "scene-title", textContent: props.title || "Results" }));
+        if (props.subtitle) copy.append(Object.assign(document.createElement("p"), { className: "scene-subtitle", textContent: props.subtitle }));
+        copy.append(buildMetricsRow(props));
+        return wrapSceneLayout(props, copy);
+      }
+
+      function QuoteScene(props) {
+        const wrap = document.createElement("div");
+        wrap.append(Object.assign(document.createElement("p"), { className: "quote-text scene-title", textContent: props.title || props.primary_idea || "Quote" }));
+        if (props.subtitle) wrap.append(Object.assign(document.createElement("p"), { className: "quote-attrib scene-subtitle", textContent: `— ${props.subtitle}` }));
+        return wrapSceneLayout(props, wrap);
+      }
+    </script>
+  </body>
+</html>
