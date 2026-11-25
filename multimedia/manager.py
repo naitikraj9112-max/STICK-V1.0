@@ -7,15 +7,15 @@ from copy import deepcopy
 from threading import RLock, Thread
 from uuid import uuid4
 
-from config import GEMINI_API_KEY, MEDIA_MAX_CONCURRENCY, VIDEO_ENABLED
+from config import CF_WORKER_URL, GEMINI_API_KEY, MEDIA_MAX_CONCURRENCY, VIDEO_ENABLED
 from multimedia.composer import VideoComposer
 from multimedia.image_agent import ImageAgent
 from multimedia.models import MediaAsset, MediaPlan, MediaTaskResult, VideoGenerationResult
 from multimedia.narration_agent import NarrationAgent
 from multimedia.planner import MultimediaPlanner
-from multimedia.providers.gemini_image import GeminiImageProvider
+from multimedia.providers.image_factory import configured_image_provider
 from multimedia.providers.gemini_text import GeminiTextProvider
-from multimedia.providers.gemini_tts import GeminiTTSProvider
+from multimedia.providers.tts_factory import configured_tts_provider
 from multimedia.timeline import TimelineBuilder
 from multimedia.tts_agent import TTSAgent
 from multimedia.video_renderer import VideoRenderer
@@ -40,9 +40,9 @@ class MultimediaManager:
         self.session_id = session_id
         self.workspace = MediaWorkspace(session_id, artifact_dir)
         self.planner = MultimediaPlanner()
-        self.image_agent = ImageAgent(image_provider or GeminiImageProvider(), self.workspace)
+        self.image_agent = ImageAgent(image_provider if image_provider is not None else configured_image_provider(), self.workspace)
         self.narration_agent = NarrationAgent(text_provider or GeminiTextProvider())
-        self.tts_agent = TTSAgent(tts_provider or GeminiTTSProvider(), self.workspace)
+        self.tts_agent = TTSAgent(tts_provider if tts_provider is not None else configured_tts_provider(), self.workspace)
         self.timeline_builder = TimelineBuilder()
         self.composer = VideoComposer(self.workspace)
         self.renderer = renderer or VideoRenderer()
@@ -68,7 +68,7 @@ class MultimediaManager:
         if not VIDEO_ENABLED:
             return "Video generation is disabled."
         if not self.gemini_configured:
-            return "Multimedia unavailable — configure GEMINI_API_KEY to enable image and TTS generation."
+            return "Gemini narration is unavailable; fallback narration and the configured TTS provider can still be used. Slide images can still use the Cloudflare Worker."
         return "Video generation ready."
 
     def schedule_after_state_commit(self, state_snapshot: dict, correlation_id: str = "-") -> None:
@@ -103,6 +103,7 @@ class MultimediaManager:
             payload = self.last_result.model_dump()
             payload["multimedia_enabled"] = self.multimedia_enabled
             payload["gemini_configured"] = self.gemini_configured
+            payload["image_provider"] = "cloudflare" if configured_image_provider().available and CF_WORKER_URL else "gemini" if self.gemini_configured else "unavailable"
             payload["media_assets"] = [asset.model_dump() for asset in self.media_assets]
             payload["generating"] = self._generating
             return payload

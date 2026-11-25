@@ -6,15 +6,16 @@
 
 <p align="center">
   <strong>Speak to build your presentation.</strong><br />
-  Live decks, photorealistic visuals, and export-ready PowerPoint — created in real time from your voice.
+  Live decks, AI-generated visuals, multilingual voice support, and editable PowerPoint — created in real time as you speak.
 </p>
 
 <p align="center">
   <a href="#description">Description</a> ·
-  <a href="#quick-start">Quick Start</a> ·
   <a href="#features">Features</a> ·
   <a href="#how-it-works">Architecture</a> ·
+  <a href="#quick-start">Quick Start</a> ·
   <a href="#configuration">Configuration</a> ·
+  <a href="#api">API</a> ·
   <a href="#verification">Verification</a>
 </p>
 
@@ -22,43 +23,38 @@
 
 ## Description
 
-> **Stick is a live presentation engine that builds professional slide decks while you speak.**  
-> No templates to fill in, no timeline to edit first — just talk, and Stick turns your ideas into a structured, visual story.
+> **Stick is a live presentation engine that builds structured slide decks while you speak.**  
+> No templates to fill in, no timeline to edit first — just talk (or type), and Stick turns your ideas into a visual presentation in real time.
 
-Most presentation tools assume you already know what every slide should say. Stick flips that workflow. You open a browser session, press the microphone, and present out loud the way you would to a colleague. An **AI Director** listens through OpenAI Realtime, detects narrative beats, and composes slides on the fly — choosing the right layout for each moment (hero intro, problem statement, solution cards, architecture diagram, metrics, closing quote).
+When `SARVAM_API_KEY` is configured, Stick streams microphone audio over a local WebSocket bridge (`communication/sarvam_realtime.py`) to **Sarvam Saaras v4**, displaying live partial transcripts and dispatching each completed utterance (with automatic language detection across English, Hindi, and 20+ Indian languages) to the AI pipeline. Without Sarvam, Stick falls back to browser `SpeechRecognition`, and a text box is always available for manual input.
 
-Behind the scenes, Stick maintains a full presentation pipeline: semantic understanding, planning, state management, strategy-based SVG layouts, **Gemini-generated photorealistic imagery**, incremental **PowerPoint export** via PPT Master, and optional **narrated MP4 video**. Every session is isolated — its own orchestrator, workspace, and artifacts — so live demos stay clean and production deployments stay predictable.
-
-**Who it's for:** founders pitching live, educators teaching in real time, consultants who think out loud, and builders who want voice-native deck creation instead of manual slide wrangling.
-
-**What you get:** a live 16:9 stage preview, an AI Director panel with deck structure and progress, downloadable `.pptx`, and optional `.mp4` — all from one continuous conversation.
+A **DeepSeek-powered AI Director** (`semantic_detector.py`, `planner.py`, `critic.py`) evaluates incoming speech, selects the right layout (`hero`, `cards`, `pipeline`, `metric`, `quote`), keeps slides in the speaker's language, generates live visuals (**Pollinations**, **Cloudflare Worker**, or **Gemini**), and exports an editable `.pptx` deck incrementally via **PPT Master**.
 
 <p align="center">
   <img src="docs/images/live-session-ui.png" alt="Stick live session — on-the-fly presentations with AI Director panel" width="920" />
 </p>
 
-<p align="center"><em>Live session UI: welcome cover, real-time stage preview, and Stick AI Director.</em></p>
+<p align="center"><em>Live session UI: welcome cover, real-time 16:9 stage preview, and Stick AI Director.</em></p>
 
 ---
 
 ## Features
 
-| | |
+| Feature | Details |
 |---|---|
-| **Voice-first authoring** | Stream microphone audio over WebRTC to OpenAI Realtime; slides update as you speak. |
-| **AI Director** | Structures narrative beats (intro, problem, solution, architecture, results, close) and picks the right slide type for each moment. |
-| **Intelligent visual composition** | Strategy-based layouts — hero, cards, architecture diagrams, pipelines, metrics, quotes — instead of one fixed template. |
-| **Live Gemini imagery** | Photorealistic slide visuals generated on demand when a scene needs them. |
-| **Incremental PPTX export** | Editable PowerPoint builds automatically in the background via PPT Master (SVG → native PPTX). |
-| **Optional MP4 video** | Narration, TTS, and FFmpeg composition when `GEMINI_API_KEY` is configured. |
-| **Session isolation** | Each presentation gets its own orchestrator, state, workspace, and artifact directory. |
-| **Persistent memory** | Neon PostgreSQL stores user preferences and presentation context across sessions. |
+| **Realtime voice authoring** | Streams 16 kHz PCM audio to **Sarvam Saaras v4** (`sarvam-realtime`) with REST clip (`/speech/transcribe`) and browser `SpeechRecognition` fallbacks, plus a manual text-input box. |
+| **Multilingual & Indian languages** | Sarvam auto-detects spoken languages (including **Hindi `hi-IN`**, English `en-IN`, and other Indian languages); planner and critic preserve the speaker's language across slide copy and `.pptx` export. |
+| **AI Director pipeline** | DeepSeek semantic gate, memory retrieval, structured `stage_scene` planner, and critic validation choose between `hero`, `cards`, `pipeline`, `metric`, and `quote` layouts. |
+| **Live AI slide imagery** | Non-blocking visual generation per scene using **Pollinations** (`POLLINATIONS_API_KEY`), **Cloudflare Worker** (`CF_WORKER_URL`), or **Gemini** (`GEMINI_API_KEY`). |
+| **Incremental PPTX export** | Converts validated SVG slides into native editable PowerPoint decks via **PPT Master** in isolated per-session workspaces. |
+| **Optional MP4 video export** | Scene narration, TTS (**Sarvam Bulbul**, **Gemini TTS**, or **Edge TTS**), and FFmpeg video composition when `VIDEO_ENABLED=true`. |
+| **Session & memory isolation** | Each browser session gets its own orchestrator, state, workspace, and artifact directory; optional **Neon PostgreSQL** persists preferences and presentation memories. |
 
 ---
 
 ## Generated slides
 
-Stick chooses layout and visual strategy per slide type. Examples from the visual composition pipeline:
+Stick chooses layout and visual strategy per slide type:
 
 <p align="center">
   <img src="docs/images/slide-hero.svg" alt="Hero slide — SpaceX introduction" width="420" />
@@ -78,39 +74,32 @@ Stick chooses layout and visual strategy per slide type. Examples from the visua
 
 ```mermaid
 flowchart LR
-  Browser["Browser UI"]
-  Realtime["OpenAI Realtime"]
-  Server["Stick Server"]
-  Director["AI Director"]
-  State["Presentation State"]
-  PPTX["PPT Master → PPTX"]
-  Media["Gemini → Images / TTS → MP4"]
-
-  Browser -->|WebRTC audio| Realtime
-  Realtime -->|transcript + tool calls| Server
-  Server --> Director
-  Director --> State
-  State --> PPTX
-  State --> Media
-  State -->|live preview| Browser
+  Mic["Microphone / Typed Input"] --> STT["Sarvam Saaras v4 WS / Browser STT"]
+  STT --> Server["Stick HTTP Server"]
+  Server --> Detector["DeepSeek Semantic Detector"]
+  Detector --> Planner["Planner & Critic"]
+  Planner --> State["State Manager"]
+  State --> UI["Live 16:9 Browser Stage"]
+  State --> PPTX["PPT Master → presentation.pptx"]
+  State --> Media["Images / TTS / FFmpeg → presentation.mp4"]
 ```
 
 **End-to-end path**
 
 ```text
-Browser → WebRTC → OpenAI Realtime → Session Manager → Orchestrator
-  → Semantic Detector → Memory / Context → Planner → Critic
+Microphone audio → Sarvam Saaras v4 WS bridge (or REST / browser fallback) → /transcript
+  → Orchestrator → Semantic Detector (DeepSeek) → Memory Retrieval → Planner → Critic
   → State Manager → Presentation State
-      ├─→ Presentation Generator → PPT Master → Editable PPTX
-      └─→ Multimedia Manager → Images / Narration / TTS → MP4
+      ├─→ Presentation Generator → PPT Master → artifacts/<session_id>/presentation.pptx
+      └─→ Live Imagery & Multimedia Manager → Pollinations / Cloudflare / Gemini + TTS → presentation.mp4
 ```
 
-Separate concepts:
+Core separation of concerns (detailed in [docs/architecture.md](docs/architecture.md)):
 
-- **Session** — one running presentation interaction (`created → connected → active → disconnected → completed`)
-- **Presentation state** — slide content and scene lifecycle (per session)
-- **Memory** — durable Neon records scoped by user / presentation / session
-- **Artifact** — filesystem PPTX and optional MP4 under `PRESENTATION_ARTIFACT_DIR/<session_id>/`
+- **Session** (`session.py`, `session_manager.py`) — lifecycle (`created → connected → active → disconnected → completed`)
+- **Presentation state** (`state_manager.py`) — active/completed scenes, theme, metadata (per session)
+- **Memory** (`memory/`) — durable PostgreSQL records scoped by user / presentation / session
+- **Artifacts** (`presentation_generator/`, `multimedia/`) — isolated filesystem `.pptx`, images, audio, and `.mp4` under `PRESENTATION_ARTIFACT_DIR/<session_id>/`
 
 ---
 
@@ -118,110 +107,98 @@ Separate concepts:
 
 ### Prerequisites
 
-- Python 3.10+
-- [OpenAI API key](https://platform.openai.com/) with Realtime access
-- Optional: [Neon PostgreSQL](https://neon.tech/) for persistent memory
-- Optional: [Google Gemini API key](https://ai.google.dev/) for live imagery and video
-- Optional: PPT Master checkout for PowerPoint export
-- Optional: `ffmpeg` for MP4 rendering
+- **Python 3.10+**
+- **[DeepSeek API key](https://platform.deepseek.com/)** (required)
+- Optional: **[Sarvam AI API key](https://www.sarvam.ai/)** for Saaras v4 realtime STT and Bulbul TTS
+- Optional: **Pollinations API key**, **Cloudflare Worker URL**, or **Google Gemini API key** for live slide visuals
+- Optional: **PPT Master** checkout (`PPT_MASTER_ROOT`) for PowerPoint export
+- Optional: **Neon PostgreSQL** (`DATABASE_URL`) for persistent memory
+- Optional: **FFmpeg** (`FFMPEG_PATH`) and `VIDEO_ENABLED=true` for MP4 rendering
 
 ### 1. Configure environment
 
-Create `.env` in the project root:
+Copy `.env.example` to `.env` in `STICK/` and fill in your keys:
+
+```bash
+cp .env.example .env
+```
+
+Minimum required configuration:
 
 ```env
-OPENAI_API_KEY=your_key_here
-DATABASE_URL=postgresql://user:password@host/database?sslmode=require
+DEEPSEEK_API_KEY=your_deepseek_key_here
+```
 
-# Optional — live slide imagery + video
-GEMINI_API_KEY=your_gemini_key_here
+Recommended additions:
 
-# Optional — PowerPoint export
+```env
+SARVAM_API_KEY=your_sarvam_key_here
+POLLINATIONS_API_KEY=your_pollinations_key_here
 PPT_MASTER_ROOT=/absolute/path/to/ppt-master
-PRESENTATION_ARTIFACT_DIR=artifacts
 PRESENTATION_PORT=8001
 ```
 
-`OPENAI_API_KEY` and `DATABASE_URL` stay on the server and are never sent to the browser.
+> `DEEPSEEK_API_KEY`, `SARVAM_API_KEY`, `POLLINATIONS_API_KEY`, `GEMINI_API_KEY`, and `DATABASE_URL` stay server-side in `.env` and are never exposed to the browser.
 
-### 2. Install and run
+### 2. Install dependencies and run
 
 ```bash
 python -m venv venv
-source venv/bin/activate   # Windows: venv\Scripts\activate
+# Windows: venv\Scripts\activate
+# macOS/Linux: source venv/bin/activate
 pip install -r requirements.txt
 python ingestion.py
 ```
 
 ### 3. Open the app
 
-Visit **http://127.0.0.1:8001** (or your configured `PRESENTATION_PORT`), click the microphone button, and start speaking. Stick replaces the welcome cover with your first slide and builds the deck as you go.
+Visit **http://127.0.0.1:8001** in Chrome or Edge, click **Start live presentation**, and start speaking (in English, Hindi, or other Sarvam-supported languages). You can also type an idea directly into the text box below the microphone button.
+
+Optional CLI speech-to-presentation mode (connects to the running server):
+
+```bash
+python speech_to_presentation.py --demo
+# or interactive chunk mode:
+python speech_to_presentation.py
+```
 
 ---
 
 ## Configuration
 
-### Core
+### Core & LLM
 
 | Variable | Default | Description |
 | --- | --- | --- |
-| `OPENAI_API_KEY` | — | Required. Powers Realtime voice sessions. |
-| `OPENAI_REALTIME_MODEL` | `gpt-realtime` | Realtime model id |
+| `DEEPSEEK_API_KEY` | — | **Required.** Powers semantic detection, scene planning, and critic evaluation. |
+| `DEEPSEEK_MODEL` | `deepseek-chat` | DeepSeek chat model ID |
+| `DEEPSEEK_BASE_URL` | `https://api.deepseek.com` | DeepSeek-compatible API base URL |
 | `PRESENTATION_PORT` | `8001` | Local HTTP server port |
-| `PRESENTATION_LANGUAGE` | `en` | Default slide copy language |
-| `DATABASE_URL` | — | Neon PostgreSQL for agent memory |
+| `PRESENTATION_LANGUAGE` | `en` | Default deck language (`en`, `hi`, `fr`, `es`, `de`, `ja`, `zh`) |
+| `DATABASE_URL` | — | Optional Neon PostgreSQL connection string for persistent memory |
+| `MIN_NEW_SCENE_SECONDS` | `15` | Dwell guard before starting a new slide on the same topic/kind |
 
-### Reliability
+### Speech (Sarvam Saaras STT & Bulbul TTS)
 
-```env
-LLM_TIMEOUT_SECONDS=20
-LLM_MAX_RETRIES=2
-LLM_RETRY_BACKOFF_SECONDS=0.5
-DATABASE_TIMEOUT_SECONDS=8
-HTTP_TIMEOUT_SECONDS=30
-RECONNECT_MAX_ATTEMPTS=3
-```
+| Variable | Default | Description |
+| --- | --- | --- |
+| `SARVAM_API_KEY` | — | Enables Sarvam realtime WebSocket STT, REST `/speech/transcribe`, and Bulbul TTS |
+| `SARVAM_STT_MODEL` | `saaras:v4` | Sarvam speech-to-text model |
+| `SARVAM_STT_WS_PORT` | `8765` | Local WebSocket bridge port for browser PCM audio streaming |
+| `SARVAM_TTS_MODEL` | `bulbul:v4-flash` | Sarvam TTS model (`bulbul:v4-flash` or `bulbul:v3`) |
+| `SARVAM_TTS_SPEAKER` | — | Optional speaker override for Bulbul TTS |
 
-### PPT Master (PowerPoint export)
+### Visuals, PPT Master & Video
 
-Runtime sessions use an **isolated workspace per session**:
-
-```text
-PRESENTATION_ARTIFACT_DIR/<session_id>/ppt_master/
-```
-
-```env
-PPT_MASTER_ROOT=/absolute/path/to/ppt-master
-GENERATION_MAX_CORRECTIONS=1
-GENERATION_DEBOUNCE_SECONDS=0.5
-```
-
-### Multimedia & video (optional)
-
-`GEMINI_API_KEY` is optional. Without it, Stick still runs and PPTX export still works; video reports `unavailable`.
-
-```env
-GEMINI_API_KEY=your_key_here
-GEMINI_IMAGE_MODEL=gemini-2.5-flash-image
-GEMINI_TTS_MODEL=gemini-2.5-flash-preview-tts
-MEDIA_MAX_CONCURRENCY=4
-VIDEO_ENABLED=true
-FFMPEG_PATH=ffmpeg
-TTS_VOICE=Kore
-```
-
-Session artifacts:
-
-```text
-artifacts/<session_id>/
-  presentation.pptx
-  presentation.mp4
-  media/images/
-  media/narration/
-  media/audio/
-  media/slides/
-  media/video/
-```
+| Variable | Default | Description |
+| --- | --- | --- |
+| `POLLINATIONS_API_KEY` | — | Primary AI slide image provider |
+| `CF_WORKER_URL` | — | Secondary Cloudflare Worker image provider (`/generate`) |
+| `GEMINI_API_KEY` | — | Fallback image provider, narration text, and Gemini TTS |
+| `PPT_MASTER_ROOT` | — | Path to PPT Master checkout for SVG validation & `.pptx` export |
+| `PRESENTATION_ARTIFACT_DIR` | `artifacts` | Directory for per-session `.pptx`, images, and `.mp4` outputs |
+| `VIDEO_ENABLED` | `false` | Enables `/presentation/video/generate` MP4 compilation |
+| `FFMPEG_PATH` | `ffmpeg` | Path to FFmpeg binary |
 
 ---
 
@@ -229,72 +206,82 @@ artifacts/<session_id>/
 
 | Endpoint | Purpose |
 | --- | --- |
-| `POST /session` | Create a presentation session |
-| `POST /realtime/session` | WebRTC SDP exchange (requires `session_id`) |
-| `POST /transcript` | Forward transcript snapshot |
-| `GET /presentation?session_id=` | Render model + generation status |
-| `GET /presentation/download?session_id=` | Latest session PPTX |
-| `GET /presentation/media?session_id=` | Scene image assets |
-| `GET /presentation/video/status?session_id=` | Video / multimedia status |
-| `POST /presentation/video/generate` | Start background MP4 generation |
-| `GET /presentation/video/download?session_id=` | Latest session MP4 |
-| `GET /health` | App, Neon, OpenAI, PPT Master, multimedia health |
+| `GET /` | Serves the browser UI (`communication/static/index.html`) |
+| `GET /health` | Reports backend, Neon DB, DeepSeek, Sarvam WS/REST, PPT Master, and multimedia status |
+| `POST /session` | Creates an isolated presentation session |
+| `POST /session/connect` | Marks a session as connected |
+| `POST /session/disconnect` | Marks a session disconnected and clears session working memory |
+| `POST /transcript` | Submits a final transcript snapshot (with optional detected `language`) to the orchestrator |
+| `POST /scene` | Applies a direct `stage_scene` update payload |
+| `POST /speech/transcribe` | Transcribes an audio clip via Sarvam REST STT |
+| `GET /presentation?session_id=` | Returns current/completed scenes, generation status, and live imagery status |
+| `GET /presentation/media?session_id=&scene_id=` | Serves generated slide visuals |
+| `GET /presentation/download?session_id=` | Downloads the session's generated `presentation.pptx` |
+| `POST /presentation/video/generate` | Starts background MP4 rendering |
+| `GET /presentation/video/status?session_id=` | Checks video build status |
+| `GET /presentation/video/download?session_id=` | Downloads the session's `presentation.mp4` |
 
 ---
 
 ## Project structure
 
 ```text
-stick/
-├── communication/          # HTTP server, WebRTC, static UI
-├── presentation_generator/   # SVG templates, visual strategy, PPT Master adapter
-├── multimedia/             # Gemini providers, video pipeline, live imagery
-├── memory/                 # Neon persistence
-├── orchestrator.py         # Session-scoped presentation orchestration
-├── realtime_director.py    # Live slide director (OpenAI tool calls)
-├── ingestion.py            # Application entry point
-└── docs/images/            # README assets (committed for GitHub rendering)
+STICK/
+├── communication/
+│   ├── static/                   # Browser UI (index.html, stick-logo.svg, welcome-cover.svg)
+│   ├── events.py                 # TranscriptEvent dataclass
+│   ├── sarvam_realtime.py        # Local WebSocket bridge to Sarvam Saaras v4 streaming
+│   └── server.py                 # HTTP server and REST endpoints
+├── presentation_generator/
+│   ├── export_scene.py           # Scene enrichment & retry compaction
+│   ├── generator.py              # Debounced PPTX generation lifecycle
+│   ├── models.py                 # GenerationResult & visual strategy helpers
+│   ├── ppt_master_adapter.py     # PPT Master SVG validation & PPTX export adapter
+│   ├── scene_images.py           # Scene image resolution for export
+│   ├── slide_paths.py            # Slide file naming helpers
+│   ├── svg_templates.py          # Kind-specific SVG slide templates
+│   └── visual_strategy.py        # Layout & visual importance planner
+├── multimedia/
+│   ├── providers/                # Pollinations, Cloudflare Worker, Gemini, Sarvam STT/TTS, Edge TTS
+│   ├── live_imagery.py           # Non-blocking per-slide AI image generation
+│   ├── manager.py                # Video pipeline orchestration
+│   ├── composer.py               # Slide + audio timeline composition
+│   └── video_renderer.py         # FFmpeg MP4 export
+├── memory/                       # Neon PostgreSQL repository, retrieval, and memory extraction
+├── tests/                        # Unit & integration tests (pytest)
+├── docs/                         # Architecture documentation & README image assets
+├── ingestion.py                  # Main application entrypoint
+├── orchestrator.py               # Session-scoped transcript -> scene pipeline
+├── semantic_detector.py          # DeepSeek semantic gate
+├── planner.py                    # DeepSeek scene planner
+├── critic.py                     # DeepSeek scene critic
+├── realtime_director.py          # Scene normalization and dwell guards
+├── state_manager.py              # Atomic presentation state transitions
+├── rendering.py                  # Frontend render-model builder
+├── speech_to_presentation.py     # CLI speech chunk runner
+├── config.py                     # Environment configuration loader
+├── .env.example                  # Sample environment variables template
+├── .gitignore                    # Ignores .env, caches, artifacts, and runtime media
+└── requirements.txt              # Python dependencies
 ```
 
 ---
 
 ## Verification
 
-```bash
-python -m py_compile *.py communication/*.py memory/*.py presentation_generator/*.py multimedia/*.py multimedia/providers/*.py
+Run the automated test suite and syntax checks:
 
-python demo_reliability.py
-python demo_memory.py
-python demo_presentation_intelligence.py
-python demo_presentation_generation.py
-python demo_end_to_end.py
-python demo_realtime_director.py
-python demo_visual_composition.py
-python demo_real_ppt_master.py      # requires PPT_MASTER_ROOT
-python demo_multimedia.py
-python demo_video_pipeline.py
-python demo_real_gemini.py          # skipped without GEMINI_API_KEY
-python demo_neon_memory.py          # requires DATABASE_URL
+```bash
+python -m pytest tests/ -v
+python -m py_compile *.py communication/*.py memory/*.py presentation_generator/*.py multimedia/*.py multimedia/providers/*.py
 ```
 
-Graceful shutdown: `Ctrl+C` completes active sessions and stops the server cleanly.
-
-`GET /health` reports `healthy` or `degraded`. Optional dependencies (Neon, PPT Master, Gemini) degrade status without blocking core voice + slide functionality.
+Additional standalone demo scripts are included at the repository root (`demo_reliability.py`, `demo_memory.py`, `demo_presentation_intelligence.py`, `demo_presentation_generation.py`, `demo_end_to_end.py`, `demo_realtime_director.py`, `demo_visual_composition.py`, `demo_real_ppt_master.py`, `demo_multimedia.py`, `demo_video_pipeline.py`).
 
 ---
 
 ## Security notes
 
-- API keys and database credentials live only in server-side `.env`.
-- Each session is isolated with its own artifact directory.
-- Do not commit `.env` or generated artifacts containing user content.
-
----
-
-<p align="center">
-  <strong>Stick</strong> — on-the-fly presentations, built from speech.
-</p>
-
-<!-- Suggested GitHub repository description (copy to repo settings):
-Live presentation engine — speak to build structured slide decks with AI Director, Gemini visuals, and automatic PowerPoint export.
--->
+- API keys and database credentials live only in `.env` (gitignored) and stay on the server.
+- Each presentation session uses an isolated workspace and artifact directory under `artifacts/<session_id>/`.
+- Never commit `.env`, credentials, or generated `artifacts/` containing user content.

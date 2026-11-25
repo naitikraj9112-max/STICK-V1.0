@@ -192,6 +192,12 @@
       .status-pill[data-phase="presenting"] .dot { background: var(--success); }
       .status-pill[data-phase="disconnected"] .dot { background: var(--text-muted); }
       .status-pill[data-phase="error"] .dot { background: var(--error); }
+      .status-pill[data-phase="muted"] {
+        border-color: rgba(220, 38, 38, 0.25);
+        background: rgba(254, 226, 226, 0.6);
+        color: #b91c1c;
+      }
+      .status-pill[data-phase="muted"] .dot { background: #ef4444; }
       .header-actions {
         display: flex; justify-self: end; align-items: center; gap: var(--s2);
       }
@@ -238,6 +244,72 @@
         .btn-present { min-height: 36px; padding: 0 var(--s5); }
         .btn-present-label-short { display: none; }
         .btn-present-label-long { display: inline; }
+      }
+
+      .btn-mute {
+        display: inline-flex; align-items: center; gap: 6px;
+        min-height: 34px; padding: 0 var(--s3);
+        border-radius: 3px;
+        border: 1px solid var(--border);
+        background: var(--bg-surface);
+        color: var(--text-primary);
+        font-size: 11px; font-weight: 700;
+        cursor: pointer;
+        transition: all var(--transition);
+      }
+      .btn-mute:hover {
+        background: var(--bg-hover);
+        border-color: var(--border-hover);
+      }
+      .btn-mute svg { width: 14px; height: 14px; }
+      .btn-mute.is-muted {
+        background: #fee2e2;
+        border-color: #fca5a5;
+        color: #b91c1c;
+      }
+      .btn-mute.is-muted svg { color: #b91c1c; }
+
+      .btn-secondary-mute {
+        display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+        width: 100%; min-height: 36px; padding: 0 12px;
+        border-radius: var(--r-sm);
+        border: 1px solid var(--border);
+        background: var(--bg-surface);
+        color: var(--text-secondary);
+        font-size: 12px; font-weight: 600;
+        cursor: pointer;
+        margin-top: 8px;
+        transition: all var(--transition);
+      }
+      .btn-secondary-mute:hover {
+        background: var(--bg-hover);
+        color: var(--text-primary);
+        border-color: var(--border-hover);
+      }
+      .btn-secondary-mute svg { width: 15px; height: 15px; }
+      .btn-secondary-mute.is-muted {
+        background: #fee2e2;
+        border-color: #fca5a5;
+        color: #b91c1c;
+      }
+      .btn-secondary-mute.is-muted svg { color: #b91c1c; }
+
+      .btn-fs-mute {
+        display: inline-flex; align-items: center; gap: 6px;
+        padding: var(--s2) var(--s3);
+        border-radius: var(--r-sm);
+        background: var(--bg-hover);
+        font-size: 11px; font-weight: 600;
+        border: 0;
+        cursor: pointer;
+        color: var(--text-primary);
+        transition: all var(--transition);
+      }
+      .btn-fs-mute:hover { background: rgba(0, 0, 0, 0.08); }
+      .btn-fs-mute svg { width: 14px; height: 14px; }
+      .btn-fs-mute.is-muted {
+        background: #fee2e2;
+        color: #b91c1c;
       }
 
       /* ── Workspace ── */
@@ -449,8 +521,9 @@
         margin: 0;
         font-size: 13px; line-height: 1.5;
         color: var(--text-secondary);
-        max-height: 4.5em;
-        overflow: hidden;
+        max-height: 8em;
+        overflow-y: auto;
+        white-space: pre-wrap;
       }
       .center-transcript.has-content .transcript-text { color: var(--text-primary); }
 
@@ -1092,6 +1165,37 @@
       }
       .suggestion strong { display: block; margin-bottom: 4px; color: var(--text-primary); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
 
+      .transcript-fallback {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 8px;
+        margin-top: 10px;
+      }
+      .transcript-fallback textarea {
+        min-height: 44px;
+        resize: vertical;
+        border: 1px solid rgba(17, 17, 15, 0.16);
+        border-radius: var(--r-sm);
+        padding: 10px 12px;
+        background: #fff;
+        color: var(--text-primary);
+        font: inherit;
+        font-size: 12px;
+      }
+      .transcript-fallback button {
+        align-self: stretch;
+        border: 0;
+        border-radius: var(--r-sm);
+        padding: 0 14px;
+        background: var(--ink);
+        color: #f1efe8;
+        font: inherit;
+        font-size: 11px;
+        font-weight: 700;
+        cursor: pointer;
+      }
+      .transcript-fallback button:disabled { opacity: 0.6; cursor: progress; }
+
       .btn-start {
         display: grid; grid-template-columns: 42px 1fr auto;
         align-items: center; gap: var(--s3);
@@ -1229,6 +1333,10 @@
             <span class="dot" aria-hidden="true"></span>
             <span id="conn-chip-label">Ready</span>
           </div>
+          <button class="btn-mute" id="mute-btn" type="button" aria-label="Mute microphone" title="Mute microphone (Shortcut: M)">
+            <i data-lucide="mic"></i>
+            <span id="mute-label">Mute</span>
+          </button>
           <button class="btn-present" id="present-btn" type="button" aria-label="Present fullscreen" disabled>
             <span class="btn-present-label-short">Present</span>
             <span class="btn-present-label-long">Present Fullscreen</span>
@@ -1262,6 +1370,7 @@
                   <span id="fs-slide-label">Slide 0 / 0</span>
                   <button type="button" id="fs-next-btn" aria-label="Next slide"><i data-lucide="chevron-right"></i></button>
                 </div>
+                <button type="button" class="btn-fs-mute" id="fs-mute-btn" aria-label="Mute microphone" title="Mute microphone (Shortcut: M)"><i data-lucide="mic"></i><span>Mute</span></button>
                 <button type="button" id="fs-exit-btn">Exit · Esc</button>
               </div>
             </div>
@@ -1342,7 +1451,7 @@
             <div class="output-row" id="output-video" data-status="idle">
               <div class="output-info">
                 <strong>Video (MP4)</strong>
-                <span id="video-status-detail">Generate after deck is ready</span>
+                <span id="video-status-detail">Video export is paused; live slide images remain active</span>
               </div>
               <div class="output-action">
                 <span class="output-status-text" id="video-status-label">Waiting</span>
@@ -1368,6 +1477,14 @@
             </span>
             <span class="btn-start-arrow" aria-hidden="true">→</span>
           </button>
+          <button class="btn-secondary-mute" id="director-mute-btn" type="button" aria-label="Mute microphone" title="Mute/Unmute microphone (Shortcut: M)">
+            <span class="mute-icon-wrap" aria-hidden="true"><i data-lucide="mic"></i></span>
+            <span class="mute-text">Mute microphone</span>
+          </button>
+          <form class="transcript-fallback" id="transcript-fallback">
+            <textarea id="typed-transcript" aria-label="Presentation idea" placeholder="Or type an idea to build a slide…"></textarea>
+            <button type="submit">Send idea</button>
+          </form>
 
           <div class="session-debug hidden" id="session-debug" aria-hidden="true"></div>
           </div>
@@ -1392,6 +1509,7 @@
         thinking: "Structuring…",
         building: "Composing slide",
         presenting: "Presenting",
+        muted: "Muted",
         disconnected: "Disconnected",
         error: "Connection issue",
       };
@@ -1425,7 +1543,7 @@
         rendering: { title: "Rendering video…", detail: "Building your MP4" },
         ready: { title: "Video ready", detail: "Download your presentation video" },
         error: { title: "Video unavailable", detail: "PowerPoint export is still available" },
-        unavailable: { title: "Multimedia unavailable", detail: "Add GEMINI_API_KEY to enable video" },
+        unavailable: { title: "Video unavailable", detail: "Video generation is currently disabled" },
       };
       const GENERATION_LABELS = {
         idle: { title: "Finish your presentation to export", detail: "PowerPoint generates automatically as you speak", status: "idle" },
@@ -1437,6 +1555,8 @@
       };
 
       const startButton = document.querySelector("#start");
+      const transcriptFallback = document.querySelector("#transcript-fallback");
+      const typedTranscript = document.querySelector("#typed-transcript");
       const statusPill = document.querySelector("#status-pill");
       const headerStatusLabel = document.querySelector("#header-status-label");
       const connChip = document.querySelector("#conn-chip");
@@ -1484,11 +1604,15 @@
       const fsPrevBtn = document.querySelector("#fs-prev-btn");
       const fsNextBtn = document.querySelector("#fs-next-btn");
       const fsExitBtn = document.querySelector("#fs-exit-btn");
+      const muteBtn = document.querySelector("#mute-btn");
+      const directorMuteBtn = document.querySelector("#director-mute-btn");
+      const fsMuteBtn = document.querySelector("#fs-mute-btn");
 
       const completed = [];
       const partial = new Map();
-      const processedCallIds = new Set();
-      const RECONNECT_MAX_ATTEMPTS = __RECONNECT_MAX_ATTEMPTS__;
+      let transcriptQueue = Promise.resolve();
+      let lastSentTranscript = "";
+      let speechFlushTimer = null;
       const STICK_LOGO_SRC = "/static/stick-logo.svg";
       let cachedSlides = [];
       let cachedCoverSlide = null;
@@ -1497,12 +1621,20 @@
       let lastRenderedBackgroundKey = null;
       let turnCount = 0;
       let isLive = false;
+      let isMuted = false;
       let isStaging = false;
+      const THINKING_MS = 1800;
       let thinkingUntil = 0;
-      let reconnectAttempts = 0;
-      let reconnectTimer;
-      let activeStream;
-      let dataChannel = null;
+      let speechRecognition = null;
+      let speechProvider = "browser";
+      let sarvamSocket = null;
+      let sarvamAudioContext = null;
+      let sarvamAudioSource = null;
+      let sarvamAudioProcessor = null;
+      let sarvamSilentGain = null;
+      let sarvamRecorder = null;
+      let sarvamMicrophone = null;
+      let sarvamQueue = Promise.resolve();
       let sessionId = null;
       let connectionLabel = "disconnected";
       let sessionStatus = "created";
@@ -1513,11 +1645,20 @@
       let lastPollMs = 0;
       let presentationStage = "introduction";
       let lastErrorMessage = "";
-      let pendingUserTurn = true;
       const debugMode = new URLSearchParams(location.search).has("debug");
 
       videoGenerateBtn.addEventListener("click", () => requestVideoGeneration());
-      startButton.addEventListener("click", () => isLive ? stopLive() : startWebRTC());
+      startButton.addEventListener("click", () => isLive ? stopLive() : startSpeechRecognition());
+      if (muteBtn) muteBtn.addEventListener("click", toggleMute);
+      if (directorMuteBtn) directorMuteBtn.addEventListener("click", toggleMute);
+      if (fsMuteBtn) fsMuteBtn.addEventListener("click", toggleMute);
+      transcriptFallback.addEventListener("submit", event => {
+        event.preventDefault();
+        const transcript = typedTranscript.value.trim();
+        transcriptQueue = transcriptQueue.then(() => submitTranscript(transcript)).catch(err => {
+          console.warn("Transcript submission error:", err);
+        });
+      });
       presentBtn.addEventListener("click", toggleFullscreen);
       fsExitBtn.addEventListener("click", () => document.exitFullscreen?.());
       fsPrevBtn.addEventListener("click", () => navigateSlide(-1));
@@ -1571,9 +1712,50 @@
         refreshUI();
       });
 
+      function toggleMute() {
+        isMuted = !isMuted;
+        updateMuteUI();
+      }
+
+      function updateMuteUI() {
+        if (sarvamMicrophone) {
+          sarvamMicrophone.getAudioTracks().forEach(track => { track.enabled = !isMuted; });
+        }
+        const buttons = [muteBtn, directorMuteBtn, fsMuteBtn].filter(Boolean);
+        buttons.forEach(btn => {
+          btn.classList.toggle("is-muted", isMuted);
+          const iconNode = btn.querySelector("i, svg");
+          if (iconNode) {
+            iconNode.outerHTML = isMuted ? '<i data-lucide="mic-off"></i>' : '<i data-lucide="mic"></i>';
+          }
+          const textNode = btn.querySelector(".mute-text") || btn.querySelector("#mute-label") || btn.querySelector("span:not(.mute-icon-wrap)");
+          if (textNode) {
+            if (btn.id === "director-mute-btn") {
+              textNode.textContent = isMuted ? "Unmute microphone" : "Mute microphone";
+            } else {
+              textNode.textContent = isMuted ? "Unmute" : "Mute";
+            }
+          }
+          btn.setAttribute("aria-label", isMuted ? "Unmute microphone" : "Mute microphone");
+          btn.setAttribute("title", isMuted ? "Unmute microphone (Shortcut: M)" : "Mute microphone (Shortcut: M)");
+          mountIcons(btn);
+        });
+
+        if (isMuted) {
+          partial.clear();
+          renderTranscript();
+        }
+        refreshUI();
+      }
+
       function handleKeydown(event) {
         const tag = event.target?.tagName;
         if (tag === "INPUT" || tag === "TEXTAREA") return;
+        if (event.key.toLowerCase() === "m") {
+          event.preventDefault();
+          toggleMute();
+          return;
+        }
         if (event.key === "Escape" && document.fullscreenElement) {
           document.exitFullscreen?.();
           return;
@@ -1606,6 +1788,7 @@
       function derivePhase() {
         if (connectionLabel === "error") return "error";
         if (connectionLabel === "connecting" || connectionLabel === "reconnecting") return "connecting";
+        if (isMuted && isLive) return "muted";
         if (isStaging) return "building";
         if (Date.now() < thinkingUntil) return "thinking";
         if (connectionLabel === "connected" && isLive) {
@@ -1617,7 +1800,8 @@
 
       function friendlyError(message) {
         const text = String(message || "");
-        if (/api_key|openai|realtime/i.test(text)) return "Stick couldn't connect to the AI service. Check your connection and try again.";
+        if (/deepseek|api_key/i.test(text)) return "Stick couldn't connect to the AI service. Check your DeepSeek API key and connection.";
+        if (/speech recognition.*network|browser speech.*connect/i.test(text)) return "Browser voice transcription is unavailable. Try Chrome or Edge, or type your idea below.";
         if (/microphone|permission|notallowed/i.test(text)) return "Microphone access is required to start presenting.";
         if (/network|fetch|failed/i.test(text)) return "Connection failed. Check your network and try again.";
         return "Something went wrong. Please try again.";
@@ -1635,7 +1819,8 @@
         directorBadge.classList.toggle("is-live", isLive);
 
         directorStatusLine.className = "director-status-line";
-        if (phase === "listening") directorStatusLine.textContent = "Listening — I'll structure as you speak…";
+        if (phase === "muted") directorStatusLine.textContent = "Microphone is muted — click Unmute or press M to speak.";
+        else if (phase === "listening") directorStatusLine.textContent = "Listening — I'll structure as you speak…";
         else if (phase === "thinking") { directorStatusLine.textContent = "Organizing your idea into the deck…"; directorStatusLine.classList.add("thinking"); }
         else if (phase === "building") { directorStatusLine.textContent = "Composing the slide layout…"; directorStatusLine.classList.add("building"); }
         else if (phase === "presenting") {
@@ -1718,11 +1903,10 @@
       }
 
       function updateCurrentInstruction() {
-        const latest = [...completed].at(-1) || "";
-        const partialText = [...partial.values()].join(" ").trim();
-        const text = partialText || latest;
+        const text = [...completed, ...partial.values()].filter(Boolean).join(" ").replace(/\s+/g, " ").trim();
         const transcriptText = text || (isLive ? "Listening…" : "Start speaking to build your deck.");
-        transcriptElement.textContent = transcriptText.length > 220 ? `${transcriptText.slice(0, 217)}…` : transcriptText;
+        transcriptElement.textContent = transcriptText;
+        transcriptElement.scrollTop = transcriptElement.scrollHeight;
         centerTranscript.classList.toggle("has-content", Boolean(text));
         if (text) {
           currentInstruction.textContent = text.length > 120 ? `${text.slice(0, 117)}…` : text;
@@ -1882,12 +2066,51 @@
         refreshUI();
       }
 
+      function recognitionSnapshot(recognition) {
+        if (!recognition || !recognition.results) return "";
+        const parts = [];
+        for (let index = 0; index < recognition.results.length; index += 1) {
+          const piece = recognition.results[index][0]?.transcript?.trim();
+          if (piece) parts.push(piece);
+        }
+        return parts.join(" ").replace(/\s+/g, " ").trim();
+      }
+
+      function submitSpeechSnapshot(text) {
+        const snapshot = String(text || "").replace(/\s+/g, " ").trim();
+        if (!snapshot || snapshot === lastSentTranscript) return;
+        lastSentTranscript = snapshot;
+        transcriptQueue = transcriptQueue.then(() => submitTranscript(snapshot)).catch(err => {
+          console.warn("Speech snapshot submission error:", err);
+        });
+      }
+
+      function flushSpeechToModel() {
+        if (speechFlushTimer) {
+          clearTimeout(speechFlushTimer);
+          speechFlushTimer = null;
+        }
+        if (isMuted) return;
+        const live = recognitionSnapshot(speechRecognition);
+        const fallback = [...partial.values()].join(" ").trim() || [...completed].at(-1) || "";
+        submitSpeechSnapshot(live || fallback);
+      }
+
       function stopLive() {
         isLive = false;
         isStaging = false;
-        if (activeStream) activeStream.getTracks().forEach(track => track.stop());
-        activeStream = null;
-        dataChannel = null;
+        if (speechProvider === "browser") flushSpeechToModel();
+        if (speechProvider === "sarvam-realtime") stopSarvamRealtime();
+        if (speechRecognition) {
+          speechRecognition.onend = null;
+          speechRecognition.stop();
+          speechRecognition = null;
+        }
+        if (sarvamRecorder && sarvamRecorder.state !== "inactive") sarvamRecorder.stop();
+        else if (sarvamMicrophone) {
+          sarvamMicrophone.getTracks().forEach(track => track.stop());
+          sarvamMicrophone = null;
+        }
         startButton.classList.remove("is-live");
         startButton.querySelector("strong").textContent = "Start live presentation";
         startButton.querySelector("small").textContent = "Speak naturally — Stick builds as you talk";
@@ -1980,41 +2203,136 @@
         sessionDebug.textContent = `Session ${sessionId?.slice(0, 8)}… · ${session.status} · ${session.connection_status}`;
       }
 
-      async function startWebRTC() {
-        if (!sessionId) await createSession();
-        isLive = true;
+      async function startSpeechRecognition() {
         startButton.disabled = true;
         startButton.querySelector("strong").textContent = "Starting…";
         setConnection("connecting", "Connecting");
         try {
-          const peerConnection = new RTCPeerConnection();
-          const audioStream = activeStream || await navigator.mediaDevices.getUserMedia({ audio: true });
-          activeStream = audioStream;
-          audioStream.getTracks().forEach(track => peerConnection.addTrack(track, audioStream));
-
-          dataChannel = peerConnection.createDataChannel("oai-events");
-          dataChannel.addEventListener("message", event => handleRealtimeEvent(JSON.parse(event.data)));
-          dataChannel.addEventListener("close", () => scheduleReconnect("Data channel closed"));
-          dataChannel.addEventListener("error", () => scheduleReconnect("Data channel error"));
-          peerConnection.addEventListener("connectionstatechange", () => {
-            if (["failed", "closed", "disconnected"].includes(peerConnection.connectionState)) {
-              scheduleReconnect(`Connection ${peerConnection.connectionState}`);
-            }
-          });
-
-          const offer = await peerConnection.createOffer();
-          await peerConnection.setLocalDescription(offer);
-          const answer = await fetch("/realtime/session", {
+          if (!sessionId) await createSession();
+          const healthResponse = await fetch("/health");
+          const health = await healthResponse.json();
+          speechProvider = health.speech_recognition || "browser";
+          const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
+          if (!["sarvam", "sarvam-realtime"].includes(speechProvider) && !SpeechRecognitionAPI) {
+            throw new Error("Speech recognition needs a configured Sarvam API key or a browser with speech recognition support.");
+          }
+          const response = await fetch("/session/connect", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ sdp: offer.sdp, session_id: sessionId }),
+            body: JSON.stringify({ session_id: sessionId }),
           });
-          if (!answer.ok) {
-            const err = await answer.json().catch(() => ({}));
-            throw new Error(err.error?.message || "Realtime session failed");
+          const payload = await response.json();
+          if (!response.ok) {
+            throw new Error(payload.error?.message || "Could not connect presentation session");
           }
-          await peerConnection.setRemoteDescription({ type: "answer", sdp: await answer.text() });
-          reconnectAttempts = 0;
+
+          if (speechProvider === "sarvam-realtime") {
+            await startSarvamRealtime(health.speech_recognition_websocket);
+            isLive = true;
+            startButton.classList.add("is-live");
+            startButton.querySelector("strong").textContent = "Stop presentation";
+            startButton.querySelector("small").textContent = "Live Sarvam transcript · building slides as you speak";
+            startButton.querySelector(".btn-start-icon").innerHTML = '<i data-lucide="square"></i>';
+            startButton.disabled = false;
+            mountIcons(startButton);
+            setConnection("connected", "Live · Sarvam");
+            return;
+          }
+
+          if (speechProvider === "sarvam") {
+            if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
+              throw new Error("This browser cannot record microphone audio for Sarvam. Try a current version of Chrome or Edge.");
+            }
+            sarvamMicrophone = await navigator.mediaDevices.getUserMedia({ audio: true });
+            sarvamMicrophone.getAudioTracks().forEach(track => { track.enabled = !isMuted; });
+            isLive = true;
+            startSarvamRecorder();
+            startButton.classList.add("is-live");
+            startButton.querySelector("strong").textContent = "Stop presentation";
+            startButton.querySelector("small").textContent = "Listening with Sarvam · transcript about every 12 seconds";
+            startButton.querySelector(".btn-start-icon").innerHTML = '<i data-lucide="square"></i>';
+            startButton.disabled = false;
+            mountIcons(startButton);
+            setConnection("connected", "Live · Sarvam");
+            return;
+          }
+
+          const recognition = new SpeechRecognitionAPI();
+          recognition.lang = navigator.language || "en-US";
+          recognition.continuous = true;
+          recognition.interimResults = true;
+
+          recognition.onresult = event => {
+            if (isMuted) {
+              partial.clear();
+              return;
+            }
+            const finalTranscripts = [];
+            const interimTranscripts = [];
+            for (let index = event.resultIndex; index < event.results.length; index += 1) {
+              const transcript = event.results[index][0].transcript.trim();
+              if (!transcript) continue;
+              if (event.results[index].isFinal) {
+                completed.push(transcript);
+                finalTranscripts.push(transcript);
+                turnCount += 1;
+              } else {
+                interimTranscripts.push(transcript);
+              }
+            }
+            partial.clear();
+            if (interimTranscripts.length) partial.set("speech", interimTranscripts.join(" "));
+            renderTranscript();
+            const snapshot = recognitionSnapshot(recognition);
+            if (speechFlushTimer) {
+              clearTimeout(speechFlushTimer);
+              speechFlushTimer = null;
+            }
+            if (finalTranscripts.length) {
+              thinkingUntil = Date.now() + THINKING_MS;
+              submitSpeechSnapshot(snapshot);
+            } else if (snapshot) {
+              speechFlushTimer = window.setTimeout(() => {
+                speechFlushTimer = null;
+                submitSpeechSnapshot(recognitionSnapshot(recognition) || snapshot);
+              }, 900);
+            }
+          };
+          recognition.onerror = event => {
+            if (event.error === "no-speech" || event.error === "aborted") return;
+            const serviceUnavailable = event.error === "network";
+            const permissionDenied = event.error === "not-allowed" || event.error === "service-not-allowed";
+            const message = serviceUnavailable
+              ? "Browser speech recognition could not connect to its transcription service. You can type your idea below."
+              : permissionDenied
+              ? "Microphone permission was denied. Allow microphone access and try again."
+              : `Speech recognition failed: ${event.error}`;
+            lastErrorMessage = message;
+            if (serviceUnavailable || permissionDenied) {
+              isLive = false;
+              speechRecognition = null;
+              startButton.classList.remove("is-live");
+              startButton.querySelector("strong").textContent = "Start live presentation";
+              startButton.disabled = false;
+            }
+            setConnection("error", message);
+          };
+          recognition.onend = () => {
+            flushSpeechToModel();
+            if (!isLive || speechRecognition !== recognition) return;
+            window.setTimeout(() => {
+              if (!isLive || speechRecognition !== recognition) return;
+              try {
+                recognition.start();
+              } catch (error) {
+                lastErrorMessage = error.message;
+                setConnection("error", error.message);
+              }
+            }, 250);
+          };
+          speechRecognition = recognition;
+          isLive = true;
+          recognition.start();
           startButton.classList.add("is-live");
           startButton.querySelector("strong").textContent = "Stop presentation";
           startButton.querySelector("small").textContent = "Tap to end listening";
@@ -2024,6 +2342,12 @@
           setConnection("connected", "Live");
         } catch (error) {
           isLive = false;
+          speechRecognition = null;
+          stopSarvamRealtime();
+          if (sarvamMicrophone) {
+            sarvamMicrophone.getTracks().forEach(track => track.stop());
+            sarvamMicrophone = null;
+          }
           startButton.disabled = false;
           startButton.querySelector("strong").textContent = "Start live presentation";
           lastErrorMessage = error.message;
@@ -2031,115 +2355,231 @@
         }
       }
 
-      function scheduleReconnect(reason) {
-        clearTimeout(reconnectTimer);
-        if (!isLive) return;
-        setConnection("reconnecting", "Reconnecting");
-        dataChannel = null;
-        if (reconnectAttempts >= RECONNECT_MAX_ATTEMPTS) {
-          lastErrorMessage = reason;
-          setConnection("error", reason);
-          startButton.disabled = false;
-          isLive = false;
-          startButton.classList.remove("is-live");
-          startButton.querySelector("strong").textContent = "Start live presentation";
-          return;
+      async function startSarvamRealtime(websocketUrl) {
+        if (!websocketUrl || !navigator.mediaDevices?.getUserMedia || !window.AudioContext) {
+          throw new Error("Sarvam realtime speech input is unavailable in this browser. Update the browser or restart Stick.");
         }
-        reconnectAttempts += 1;
-        reconnectTimer = setTimeout(() => startWebRTC(), 500 * (2 ** (reconnectAttempts - 1)));
+        sarvamSocket = new WebSocket(websocketUrl);
+        await new Promise((resolve, reject) => {
+          const timeout = window.setTimeout(() => reject(new Error("Sarvam speech connection timed out.")), 10000);
+          sarvamSocket.addEventListener("open", () => { clearTimeout(timeout); resolve(); }, { once: true });
+          sarvamSocket.addEventListener("error", () => { clearTimeout(timeout); reject(new Error("Could not connect to Sarvam live transcription.")); }, { once: true });
+        });
+        sarvamSocket.addEventListener("message", handleSarvamRealtimeMessage);
+        sarvamSocket.addEventListener("close", () => {
+          if (isLive && speechProvider === "sarvam-realtime") {
+            lastErrorMessage = "Sarvam live transcription disconnected. Restart the presentation to reconnect.";
+            stopLive();
+            setConnection("error", lastErrorMessage);
+          }
+        });
+
+        sarvamMicrophone = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true } });
+        sarvamMicrophone.getAudioTracks().forEach(track => { track.enabled = !isMuted; });
+        sarvamAudioContext = new AudioContext({ sampleRate: 16000 });
+        await sarvamAudioContext.resume();
+        sarvamAudioSource = sarvamAudioContext.createMediaStreamSource(sarvamMicrophone);
+        sarvamAudioProcessor = sarvamAudioContext.createScriptProcessor(4096, 1, 1);
+        sarvamSilentGain = sarvamAudioContext.createGain();
+        sarvamSilentGain.gain.value = 0;
+        sarvamAudioProcessor.onaudioprocess = event => {
+          if (!sarvamSocket || sarvamSocket.readyState !== WebSocket.OPEN) return;
+          const input = event.inputBuffer.getChannelData(0);
+          const ratio = sarvamAudioContext.sampleRate / 16000;
+          const length = Math.floor(input.length / ratio);
+          if (!length) return;
+          const pcm = new Int16Array(length);
+          for (let index = 0; index < length; index += 1) {
+            const position = index * ratio;
+            const left = Math.floor(position);
+            const fraction = position - left;
+            const sample = input[left] * (1 - fraction) + input[Math.min(left + 1, input.length - 1)] * fraction;
+            pcm[index] = Math.max(-1, Math.min(1, sample)) < 0
+              ? Math.max(-32768, Math.round(sample * 32768))
+              : Math.min(32767, Math.round(sample * 32767));
+          }
+          const bytes = new Uint8Array(pcm.buffer);
+          let binary = "";
+          for (let offset = 0; offset < bytes.length; offset += 1) binary += String.fromCharCode(bytes[offset]);
+          sarvamSocket.send(JSON.stringify({ event: "audio_input", audio: btoa(binary) }));
+        };
+        sarvamAudioSource.connect(sarvamAudioProcessor);
+        sarvamAudioProcessor.connect(sarvamSilentGain);
+        sarvamSilentGain.connect(sarvamAudioContext.destination);
+        isLive = true;
       }
 
-      function handleRealtimeEvent(event) {
-        if (event.type === "error") {
-          lastErrorMessage = event.error?.message || "Realtime error";
-          setConnection("error", lastErrorMessage);
+      function stopSarvamRealtime() {
+        if (sarvamAudioProcessor) {
+          sarvamAudioProcessor.disconnect();
+          sarvamAudioProcessor.onaudioprocess = null;
+          sarvamAudioProcessor = null;
+        }
+        if (sarvamAudioSource) { sarvamAudioSource.disconnect(); sarvamAudioSource = null; }
+        if (sarvamSilentGain) { sarvamSilentGain.disconnect(); sarvamSilentGain = null; }
+        if (sarvamAudioContext) {
+          sarvamAudioContext.close().catch(() => {});
+          sarvamAudioContext = null;
+        }
+        if (sarvamMicrophone) {
+          sarvamMicrophone.getTracks().forEach(track => track.stop());
+          sarvamMicrophone = null;
+        }
+        if (sarvamSocket && sarvamSocket.readyState === WebSocket.OPEN) {
+          sarvamSocket.send(JSON.stringify({ event: "end" }));
+          const socket = sarvamSocket;
+          window.setTimeout(() => { if (socket.readyState !== WebSocket.CLOSED) socket.close(); }, 5000);
+        } else if (sarvamSocket && sarvamSocket.readyState !== WebSocket.CLOSED) {
+          sarvamSocket.close();
+        }
+        sarvamSocket = null;
+      }
+
+      function handleSarvamRealtimeMessage(message) {
+        let payload;
+        try { payload = JSON.parse(message.data); } catch { return; }
+        if (payload.event === "transcript.partial") {
+          if (isMuted) {
+            partial.delete("sarvam");
+            return;
+          }
+          const text = String(payload.text || "").trim();
+          if (text) partial.set("sarvam", text);
+          else partial.delete("sarvam");
+          renderTranscript();
           return;
         }
-        if (event.type === "conversation.item.input_audio_transcription.delta") {
-          partial.set(event.item_id, (partial.get(event.item_id) || "") + event.delta);
-          renderTranscript();
-        }
-        if (event.type === "conversation.item.input_audio_transcription.completed") {
-          partial.delete(event.item_id);
-          completed.push(event.transcript);
+        if (payload.event === "transcript.final") {
+          const text = String(payload.text || "").replace(/\s+/g, " ").trim();
+          partial.delete("sarvam");
+          if (!text) { renderTranscript(); return; }
+          const detectedLanguage = (payload.language && (payload.language_confidence == null || payload.language_confidence >= 0.7))
+            ? String(payload.language)
+            : "";
+          completed.push(text);
           turnCount += 1;
-          pendingUserTurn = true;
           thinkingUntil = Date.now() + THINKING_MS;
           renderTranscript();
-          refreshUI();
+          transcriptQueue = transcriptQueue.then(() => submitTranscript(text, detectedLanguage)).catch(error => {
+            lastErrorMessage = error.message;
+            setConnection("error", error.message);
+          });
+          return;
         }
-        if (event.type === "response.function_call_arguments.done" && event.name === "stage_scene") {
-          handleStageSceneCall(event.call_id, event.arguments);
-        }
-        if (event.type === "response.done" && event.response?.output) {
-          for (const item of event.response.output) {
-            if (item.type === "function_call" && item.name === "stage_scene" && item.arguments) {
-              handleStageSceneCall(item.call_id, item.arguments);
-            }
-          }
+        if (payload.event === "error") {
+          lastErrorMessage = payload.message || "Sarvam transcription failed.";
+          setConnection("error", lastErrorMessage);
+          if ((payload.fatal || payload.is_fatal) && isLive) stopLive();
         }
       }
 
-      async function handleStageSceneCall(callId, rawArguments) {
-        if (processedCallIds.has(callId)) return;
-        processedCallIds.add(callId);
-        let sceneUpdate;
+      function startSarvamRecorder() {
+        if (!isLive || !sarvamMicrophone) return;
+        const mimeType = ["audio/webm;codecs=opus", "audio/webm", "audio/ogg;codecs=opus", "audio/mp4"]
+          .find(type => MediaRecorder.isTypeSupported(type));
+        const recorder = mimeType
+          ? new MediaRecorder(sarvamMicrophone, { mimeType })
+          : new MediaRecorder(sarvamMicrophone);
+        sarvamRecorder = recorder;
+        const chunks = [];
+        recorder.ondataavailable = event => {
+          if (event.data?.size) chunks.push(event.data);
+        };
+        recorder.onstop = async () => {
+          sarvamRecorder = null;
+          if (sarvamMicrophone && !isLive) {
+            sarvamMicrophone.getTracks().forEach(track => track.stop());
+            sarvamMicrophone = null;
+          }
+          if (!isMuted && chunks.length) {
+            const audio = new Blob(chunks, { type: recorder.mimeType || mimeType || "audio/webm" });
+            if (audio.size) {
+              sarvamQueue = sarvamQueue.then(() => transcribeSarvamClip(audio)).catch(error => {
+                lastErrorMessage = error.message;
+                setConnection("error", error.message);
+              });
+            }
+          }
+          if (isLive && sarvamMicrophone) startSarvamRecorder();
+        };
+        recorder.onerror = event => {
+          lastErrorMessage = event.error?.message || "Microphone recording failed.";
+          setConnection("error", lastErrorMessage);
+        };
+        recorder.start();
+        window.setTimeout(() => {
+          if (isLive && sarvamRecorder === recorder && recorder.state === "recording") recorder.stop();
+        }, 12000);
+      }
+
+      async function transcribeSarvamClip(audio) {
         try {
-          sceneUpdate = typeof rawArguments === "string" ? JSON.parse(rawArguments) : rawArguments;
-        } catch {
-          acknowledgeToolCall(callId, { success: false, reason: "Invalid scene arguments" });
-          return;
+          const response = await fetch("/speech/transcribe", {
+            method: "POST",
+            headers: { "Content-Type": audio.type || "audio/webm" },
+            body: audio,
+          });
+          const result = await response.json();
+          if (!response.ok) throw new Error(result.error?.message || "Sarvam transcription failed");
+          const transcript = String(result.transcript || "").replace(/\s+/g, " ").trim();
+          if (!transcript) return;
+          const detectedLanguage = result.language_code ? String(result.language_code) : "";
+          completed.push(transcript);
+          partial.clear();
+          turnCount += 1;
+          renderTranscript();
+          thinkingUntil = Date.now() + THINKING_MS;
+          transcriptQueue = transcriptQueue.then(() => submitTranscript(transcript, detectedLanguage)).catch(error => {
+            console.warn("Sarvam transcript submission error:", error);
+          });
+          await transcriptQueue;
+        } catch (error) {
+          lastErrorMessage = error.message;
+          setConnection("error", error.message);
         }
-        if (sceneUpdate.action === "hold") {
-          thinkingUntil = 0;
-          acknowledgeToolCall(callId, { success: true, held: true, scene_updated: false });
-          refreshUI();
-          return;
-        }
-        if (!pendingUserTurn && cachedSlides.length > 0) {
-          acknowledgeToolCall(callId, { success: true, held: true, scene_updated: false, reason: "No new speech turn." });
-          refreshUI();
-          return;
-        }
+      }
+
+      async function submitTranscript(transcript, detectedLanguage = "") {
+        const text = String(transcript || "").replace(/\s+/g, " ").trim();
+        if (!text) return;
         isStaging = true;
         thinkingUntil = 0;
         refreshUI();
         try {
-          const response = await fetch("/scene", {
+          if (!sessionId) await createSession();
+          const response = await fetch("/transcript", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ session_id: sessionId, scene_update: sceneUpdate, call_id: callId }),
+            body: JSON.stringify({
+              session_id: sessionId,
+              transcript: text,
+              is_final: true,
+              source: speechProvider.startsWith("sarvam") ? "sarvam-saaras-v4-realtime" : "browser-speech-recognition",
+              event_id: crypto.randomUUID(),
+              ...(detectedLanguage ? { language: detectedLanguage } : {}),
+            }),
           });
           const result = await response.json();
-          if (result.success && !result.held) {
-            pendingUserTurn = false;
-            await refreshPresentation(true);
+          if (!response.ok || result.success === false) {
+            throw new Error(result.error?.message || result.reason || "Transcript could not be processed");
           }
-          acknowledgeToolCall(callId, result);
+          await refreshPresentation(Boolean(result.scene_updated));
+          if (!isLive) setConnection("disconnected", "Ready");
           updateGenerationStatus();
         } catch (error) {
+          if (lastSentTranscript === text) lastSentTranscript = "";
           lastErrorMessage = error.message;
+          setConnection("error", error.message);
         } finally {
           isStaging = false;
           refreshUI();
         }
       }
 
-      function acknowledgeToolCall(callId, result) {
-        if (!dataChannel || dataChannel.readyState !== "open") return;
-        dataChannel.send(JSON.stringify({
-          type: "conversation.item.create",
-          item: { type: "function_call_output", call_id: callId, output: JSON.stringify(result) },
-        }));
-        // Do NOT send response.create here — server VAD will start the next turn only when the user speaks again.
-      }
-
       function renderTranscript() {
-        const latest = [...completed].at(-1) || "";
-        const partialText = [...partial.values()].join(" ").trim();
-        const displayText = partialText || latest;
-        const snippet = displayText.length > 180 ? `${displayText.slice(0, 177)}…` : displayText;
-        transcriptElement.textContent = snippet || "Start speaking to build your deck.";
+        const displayText = [...completed, ...partial.values()].filter(Boolean).join(" ").replace(/\s+/g, " ").trim();
+        transcriptElement.textContent = displayText || "Start speaking to build your deck.";
+        transcriptElement.scrollTop = transcriptElement.scrollHeight;
         transcriptElement.classList.toggle("is-partial", partial.size > 0);
         updateCurrentInstruction();
         refreshUI();
@@ -2195,6 +2635,7 @@
         syncPresentationMeta(presentation);
         const slides = slidesFromPresentation(presentation);
         cachedCoverSlide = coverFromPresentation(presentation);
+        const previousSlideCount = cachedSlides.length;
         cachedSlides = slides;
         slideCountLabel.textContent = `${slides.length} scene${slides.length === 1 ? "" : "s"}`;
 
@@ -2213,7 +2654,9 @@
         }
 
         slideStripEmpty.classList.add("hidden");
-        if (jumpToLatest || activeSlideIndex < 0 || activeSlideIndex >= slides.length) activeSlideIndex = slides.length - 1;
+        if (jumpToLatest || slides.length > previousSlideCount || activeSlideIndex < 0 || activeSlideIndex >= slides.length) {
+          activeSlideIndex = slides.length - 1;
+        }
 
         slideNavElement.replaceChildren(...slides.map((slide, index) => {
           const button = document.createElement("button");
@@ -2272,14 +2715,14 @@
       }
 
       function showSlide(slide, animate) {
-        const backgroundKey = `${slide.props?.background_image_url || ""}:${slide.props?.background_status || ""}:${slide.props?.hero_image_url || ""}:${slide.props?.hero_image_status || ""}`;
+        const contentKey = `${slide.id}:${slide.component}:${slide.props?.title || ""}:${slide.props?.subtitle || ""}:${JSON.stringify(slide.props?.card_items || slide.props?.cards || [])}:${slide.props?.hero_image_url || ""}:${slide.props?.hero_image_status || ""}`;
         const isNewSlide = slide.id !== lastRenderedSlideId;
-        const backgroundChanged = backgroundKey !== lastRenderedBackgroundKey;
-        if (!isNewSlide && !backgroundChanged && stageCanvas.querySelector(".scene-layer")) {
+        const contentChanged = contentKey !== lastRenderedBackgroundKey;
+        if (!isNewSlide && !contentChanged && stageCanvas.querySelector(".scene-layer")) {
           return;
         }
         lastRenderedSlideId = slide.id;
-        lastRenderedBackgroundKey = backgroundKey;
+        lastRenderedBackgroundKey = contentKey;
         const layer = renderSceneFromModel(slide);
         layer.classList.add(isNewSlide && animate ? "is-entering" : "is-updating");
         stageCanvas.querySelectorAll(".scene-layer").forEach(node => node.remove());
@@ -2333,7 +2776,7 @@
         const videoInfo = VIDEO_LABELS[videoPhase] || VIDEO_LABELS.idle;
 
         const liveImagery = presentation.live_imagery || {};
-        if (!liveImagery.gemini_configured) {
+        if (!liveImagery.image_provider_configured) {
           liveImageryPhase = "unavailable";
         } else if (liveImagery.generating) {
           liveImageryPhase = "generating";
@@ -2347,13 +2790,13 @@
 
         if (liveImageryPhase === "generating") {
           videoStatusLabel.textContent = "Generating visual…";
-          videoStatusDetail.textContent = "Creating Gemini panel visuals for slides";
+          videoStatusDetail.textContent = `Creating ${liveImagery.image_provider || "AI"} panel visuals for slides`;
         } else if (liveImageryPhase === "ready" && liveImagery.ready_count > 0) {
           videoStatusLabel.textContent = video.status === "ready" ? "Ready" : videoBusyLabel(videoPhase) || "Backgrounds ready";
           videoStatusDetail.textContent = `${liveImagery.ready_count} slide background${liveImagery.ready_count === 1 ? "" : "s"} applied`;
         } else if (liveImageryPhase === "unavailable") {
           videoStatusLabel.textContent = "Backgrounds unavailable";
-          videoStatusDetail.textContent = "Add GEMINI_API_KEY for live slide backgrounds";
+          videoStatusDetail.textContent = "Configure CF_WORKER_URL or GEMINI_API_KEY for live slide backgrounds";
         } else if (liveImageryPhase === "error") {
           videoStatusLabel.textContent = "Background error";
           videoStatusDetail.textContent = liveImagery.last_error || "Background generation failed";
@@ -2365,7 +2808,7 @@
         const videoBusy = ["planning", "generating_media", "synthesizing_audio", "composing", "rendering"].includes(videoPhase);
         outputVideo.dataset.status = videoReady ? "ready" : videoBusy ? "generating" : videoPhase === "error" ? "error" : videoPhase === "unavailable" ? "error" : "idle";
         videoSpinner.classList.toggle("hidden", !videoBusy);
-        videoGenerateBtn.style.display = pptReady && !videoReady && !videoBusy && video.gemini_configured !== false ? "inline" : "none";
+        videoGenerateBtn.style.display = pptReady && !videoReady && !videoBusy && video.multimedia_enabled !== false && video.gemini_configured !== false ? "inline" : "none";
         videoGenerateBtn.disabled = videoBusy;
         videoGenerateBtn.textContent = videoBusy ? "Generating…" : "Generate";
         if (videoReady) videoDownloadLink.href = `/presentation/video/download?session_id=${encodeURIComponent(sessionId)}`;
@@ -2525,7 +2968,7 @@
         frame.className = "cover-frame";
         const art = document.createElement("img");
         art.className = "cover-art";
-        art.src = "/static/welcome-cover.png";
+        art.src = "/static/welcome-cover.svg";
         art.alt = props.subtitle || "On-the-fly presentations with instant visuals and data cards";
         const status = document.createElement("p");
         status.className = `cover-await${isLive ? " is-live" : ""}`.trim();

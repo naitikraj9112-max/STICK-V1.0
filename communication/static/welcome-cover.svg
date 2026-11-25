@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" fill="none">
+  <defs>
+    <linearGradient id="paper" x1="75" y1="45" x2="886" y2="492" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FBF8F0"/>
+      <stop offset="1" stop-color="#F1EDE3"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="555" y1="113" x2="858" y2="425" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFB294"/>
+      <stop offset="1" stop-color="#F06445"/>
+    </linearGradient>
+    <filter id="shadow" x="482" y="81" width="415" height="387" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse">
+      <feFlood flood-opacity="0" result="BackgroundImageFix"/>
+      <feColorMatrix in="SourceAlpha" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
+      <feOffset dy="12"/>
+      <feGaussianBlur stdDeviation="14"/>
+      <feComposite in2="hardAlpha" operator="out"/>
+      <feColorMatrix values="0 0 0 0 0.12 0 0 0 0 0.1 0 0 0 0 0.07 0 0 0 0.14 0"/>
+      <feBlend in2="BackgroundImageFix" result="effect1_dropShadow"/>
+      <feBlend in="SourceGraphic" in2="effect1_dropShadow" result="shape"/>
+    </filter>
+  </defs>
+  <path fill="url(#paper)" d="M0 0h960v540H0z"/>
+  <circle cx="910" cy="37" r="196" fill="#E8E0D1" fill-opacity=".38"/>
+  <circle cx="73" cy="501" r="190" fill="#E8E0D1" fill-opacity=".3"/>
+  <path d="M72 92h42" stroke="#F06445" stroke-linecap="round" stroke-width="5"/>
+  <text x="72" y="137" fill="#171713" font-family="Arial,sans-serif" font-size="16" font-weight="700" letter-spacing="4">STICK  /  LIVE PRESENTATIONS</text>
+  <text x="70" y="238" fill="#171713" font-family="Arial,sans-serif" font-size="61" font-weight="700" letter-spacing="-3">Speak.</text>
+  <text x="70" y="307" fill="#171713" font-family="Arial,sans-serif" font-size="61" font-weight="700" letter-spacing="-3">I'll build.</text>
+  <text x="74" y="355" fill="#6C6961" font-family="Arial,sans-serif" font-size="19">Turn your ideas into a story worth sharing.</text>
+  <g filter="url(#shadow)">
+    <rect x="528" y="116" width="326" height="304" rx="19" fill="#fff" stroke="#E8E3D9"/>
+    <rect x="548" y="136" width="286" height="164" rx="12" fill="url(#accent)"/>
+    <circle cx="778" cy="181" r="31" fill="#FFD9C9" fill-opacity=".72"/>
+    <path d="M566 270c32-36 61-52 86-45 28 8 43 33 69 21 17-8 30-31 46-39 23-11 45 3 67 24v69H548v-30l18 0Z" fill="#F8D7C6" fill-opacity=".83"/>
+    <path d="M566 277c34-21 55-31 75-25 17 5 33 21 50 19 27-2 50-35 75-35 20 0 42 13 68 35v29H548v-16l18-7Z" fill="#34362E" fill-opacity=".84"/>
+    <rect x="554" y="321" width="176" height="13" rx="6.5" fill="#25251F"/>
+    <rect x="554" y="345" width="246" height="8" rx="4" fill="#E8E5DE"/>
+    <rect x="554" y="363" width="213" height="8" rx="4" fill="#E8E5DE"/>
+    <rect x="554" y="387" width="79" height="13" rx="6.5" fill="#F06445"/>
+  </g>
+  <g fill="#F06445">
+    <circle cx="838" cy="89" r="5"/><circle cx="862" cy="89" r="5"/><circle cx="886" cy="89" r="5"/>
+  </g>
+</svg>

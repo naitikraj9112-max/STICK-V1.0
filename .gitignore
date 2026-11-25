@@ -1,33 +1,68 @@
+# Environment variables and secrets
 .env
-.env.local
-.env.*.local
+.env.*
 !.env.example
+credentials.json
+*.pem
+*.key
+*.p12
+id_rsa*
 
+# Python byte-code, caches, and packaging
 __pycache__/
 *.py[cod]
+*$py.class
 *.pyo
+.Python
+*.egg-info/
+.installed.cfg
+*.egg
+dist/
+build/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+.coverage
+htmlcov/
 
-artifacts/
+# Virtual environments
 venv/
-.DS_Store
+.venv/
+env/
+.env.venv/
 
+# Generated presentations, media, and runtime artifacts
+artifacts/
 *.pptx
 *.mp4
 *.mov
 *.wav
+*.mp3
+*.webm
+*.ogg
+*.m4a
 *.jpg
 *.jpeg
 *.png
+*.webp
 !docs/images/**
-
-credentials.json
-*.pem
-*.key
-id_rsa*
+!communication/static/**
 
 # Local runtime memory (demo/session data)
 memory/session_memory.json
 memory/user_memory.json
+
+# Logs and temporary files
+*.log
+*.tmp
+tmp/
+
+# IDE and OS files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+desktop.ini

@@ -151,11 +151,11 @@ def main() -> None:
 
     session = request("POST", "/session", {})
     session_id = session["session_id"]
-    print(f"Session: {session_id[:8]}…")
+    print(f"Session: {session_id[:8]}...")
 
     cover = (session.get("presentation") or {}).get("current_scene") or {}
     assert cover.get("component") == "CoverScene", f"Expected cover, got {cover.get('component')}"
-    print("✓ Welcome cover present")
+    print("[OK] Welcome cover present")
 
     for index, planned in enumerate(SLIDES, start=1):
         if index > 1:
@@ -170,24 +170,24 @@ def main() -> None:
         )
         title = scene["props"].get("title", "")
         assert title and title.lower() != "new idea", f"Slide {index} has weak title: {title!r}"
-        print(f"✓ Slide {index}: {planned['kind']:8} → {scene['component']:13} “{title}”")
+        print(f"[OK] Slide {index}: {planned['kind']:8} -> {scene['component']:13} \"{title}\"")
 
     presentation = fetch_presentation(session_id)
     slides = all_slides(presentation)
-    assert 5 <= len(slides) <= 7, f"Expected 5–7 slides, got {len(slides)}"
+    assert 5 <= len(slides) <= 7, f"Expected 5-7 slides, got {len(slides)}"
     kinds = [s.get("component", "").replace("Scene", "").lower() for s in slides]
     for expected in ("hero", "cards", "pipeline", "metric", "quote"):
         assert expected in kinds, f"Missing {expected} slide in deck: {kinds}"
-    print(f"✓ Deck has {len(slides)} slides with types: {', '.join(kinds)}")
+    print(f"[OK] Deck has {len(slides)} slides with types: {', '.join(kinds)}")
 
     generation = wait_for_pptx(session_id)
     status = generation.get("status")
     artifact = generation.get("artifact_path")
     if status == "ready" and artifact and Path(artifact).is_file():
         assert is_zipfile(artifact), "PPTX artifact is not a valid zip"
-        print(f"✓ PPTX ready ({Path(artifact).stat().st_size // 1024} KB)")
+        print(f"[OK] PPTX ready ({Path(artifact).stat().st_size // 1024} KB)")
     else:
-        print(f"⚠ PPTX generation: {status} — {generation.get('message', '')}")
+        print(f"[!] PPTX generation: {status} - {generation.get('message', '')}")
 
     print("\nFull presentation test passed.")
 

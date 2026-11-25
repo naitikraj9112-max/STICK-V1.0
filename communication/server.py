@@ -1,4 +1,4 @@
-"""Small HTTP boundary between the browser WebRTC client and the AI pipeline."""
+"""HTTP boundary between microphone transcription and the presentation pipeline."""
 
 import json
 import logging
@@ -9,40 +9,18 @@ from pathlib import Path
 from threading import Thread
 from urllib.parse import parse_qs, urlparse
 
-import requests
-
 from communication.events import TranscriptEvent
-from config import DATABASE_URL, GEMINI_API_KEY, HTTP_TIMEOUT_SECONDS, OPENAI_API_KEY, PPT_MASTER_ROOT, PRESENTATION_PORT, RECONNECT_MAX_ATTEMPTS, VIDEO_ENABLED
+from config import CF_WORKER_URL, DATABASE_URL, DEEPSEEK_API_KEY, GEMINI_API_KEY, POLLINATIONS_API_KEY, PPT_MASTER_ROOT, PRESENTATION_PORT, SARVAM_API_KEY, SARVAM_STT_MODEL, VIDEO_ENABLED
+from communication.sarvam_realtime import SarvamRealtimeBridge
+from multimedia.providers.sarvam_stt import transcribe_audio
 from presentation_generator.ppt_master_adapter import PptMasterAdapter
 from presentation_context import normalize_output_language
-from realtime_tools import build_realtime_session_config
 from reliability import failure
 from rendering import render_presentation
 from session import session_summary
 
 STATIC_DIR = Path(__file__).with_name("static")
-OPENAI_CALL_URL = "https://api.openai.com/v1/realtime/calls"
 LOGGER = logging.getLogger(__name__)
-
-
-def create_webrtc_session(offer_sdp: str, output_language: str | None = None) -> str:
-    """Send the browser SDP offer to OpenAI and return its SDP answer."""
-    if not OPENAI_API_KEY:
-        raise RuntimeError("OPENAI_API_KEY is missing. Add it to .env before starting the application.")
-
-    session = build_realtime_session_config(output_language)
-    response = requests.post(
-        OPENAI_CALL_URL,
-        headers={"Authorization": f"Bearer {OPENAI_API_KEY}"},
-        files={
-            # OpenAI expects sdp as a multipart form field, not a file upload.
-            "sdp": (None, offer_sdp),
-            "session": (None, json.dumps(session), "application/json"),
-        },
-        timeout=HTTP_TIMEOUT_SECONDS,
-    )
-    response.raise_for_status()
-    return response.text
 
 
 def ppt_master_status() -> str:
@@ -53,18 +31,22 @@ def ppt_master_status() -> str:
 
 
 def start_communication_server(session_manager, host: str = "127.0.0.1", port: int = PRESENTATION_PORT, block: bool = True):
-    """Serve the browser client and receive its OpenAI Realtime transcript events."""
-    if not OPENAI_API_KEY:
-        raise RuntimeError("OPENAI_API_KEY is missing. Add it to .env before starting the application.")
+    """Serve the microphone transcription client and presentation pipeline."""
+    if not DEEPSEEK_API_KEY:
+        raise RuntimeError("DEEPSEEK_API_KEY is missing. Add it to .env before starting the application.")
 
-    server = ThreadingHTTPServer((host, port), make_request_handler(session_manager))
+    realtime_bridge = SarvamRealtimeBridge() if SARVAM_API_KEY else None
+    if realtime_bridge and not realtime_bridge.start():
+        realtime_bridge = None
+    server = ThreadingHTTPServer((host, port), make_request_handler(session_manager, realtime_bridge))
+    server.sarvam_realtime_bridge = realtime_bridge
     LOGGER.info("Presentation server listening on http://%s:%s", host, port)
     if block:
         server.serve_forever()
     return server
 
 
-def make_request_handler(session_manager):
+def make_request_handler(session_manager, realtime_bridge=None):
     """Create a handler with access to the session-scoped presentation pipeline."""
 
     class CommunicationHandler(BaseHTTPRequestHandler):
@@ -81,12 +63,16 @@ def make_request_handler(session_manager):
                     "status": "degraded" if core_degraded else "healthy",
                     "backend": "healthy",
                     "neon": memory_status,
-                    "openai_configuration": "healthy" if OPENAI_API_KEY else "unavailable",
-                    "realtime": "ready",
+                    "deepseek_configuration": "healthy" if DEEPSEEK_API_KEY else "unavailable",
+                    "speech_recognition": "sarvam-realtime" if realtime_bridge and realtime_bridge.available else "sarvam" if SARVAM_API_KEY else "browser",
+                    "speech_recognition_model": SARVAM_STT_MODEL if SARVAM_API_KEY else None,
+                    "speech_recognition_websocket": f"ws://127.0.0.1:{realtime_bridge.port}" if realtime_bridge and realtime_bridge.available else None,
                     "ppt_master": ppt_status,
                     "multimedia": {
                         "enabled": VIDEO_ENABLED,
                         "gemini_configured": bool(GEMINI_API_KEY),
+                        "image_provider": "pollinations" if POLLINATIONS_API_KEY else "cloudflare" if CF_WORKER_URL else "gemini" if GEMINI_API_KEY else "unavailable",
+                        "image_provider_configured": bool(POLLINATIONS_API_KEY or CF_WORKER_URL or GEMINI_API_KEY),
                     },
                     "sessions": session_manager.health_summary(),
                 })
@@ -217,7 +203,7 @@ def make_request_handler(session_manager):
             if path != "/":
                 self.send_error(HTTPStatus.NOT_FOUND)
                 return
-            content = (STATIC_DIR / "index.html").read_text().replace("__RECONNECT_MAX_ATTEMPTS__", str(RECONNECT_MAX_ATTEMPTS)).encode()
+            content = (STATIC_DIR / "index.html").read_text(encoding="utf-8").encode("utf-8")
             self.send_response(HTTPStatus.OK)
             self.send_header("Content-Type", "text/html; charset=utf-8")
             self.send_header("Cache-Control", "no-cache, no-store, must-revalidate")
@@ -227,9 +213,31 @@ def make_request_handler(session_manager):
 
         def do_POST(self):
             try:
-                data = self.read_json()
                 parsed = urlparse(self.path)
                 path = parsed.path
+
+                if path == "/speech/transcribe":
+                    if not SARVAM_API_KEY:
+                        self.send_json(failure("speech_recognition", "Sarvam speech recognition is not configured"), HTTPStatus.SERVICE_UNAVAILABLE)
+                        return
+                    length = int(self.headers.get("Content-Length", "0"))
+                    if length <= 0 or length > 15 * 1024 * 1024:
+                        self.send_json(failure("speech_recognition", "Audio clip is empty or exceeds the 15 MB limit", retryable=False), HTTPStatus.REQUEST_ENTITY_TOO_LARGE if length > 15 * 1024 * 1024 else HTTPStatus.BAD_REQUEST)
+                        return
+                    audio = self.rfile.read(length)
+                    try:
+                        result = transcribe_audio(audio, self.headers.get("Content-Type", "audio/webm"))
+                    except ValueError as error:
+                        self.send_json(failure("speech_recognition", str(error), retryable=False), HTTPStatus.BAD_REQUEST)
+                        return
+                    except Exception:
+                        LOGGER.exception("Sarvam speech transcription failed")
+                        self.send_json(failure("speech_recognition", "Sarvam could not transcribe this audio clip", retryable=True), HTTPStatus.BAD_GATEWAY)
+                        return
+                    self.send_json(result)
+                    return
+
+                data = self.read_json()
 
                 if path == "/session":
                     session = session_manager.create()
@@ -255,16 +263,12 @@ def make_request_handler(session_manager):
                     self.send_json({"success": True})
                     return
 
-                if path == "/realtime/session":
+                if path == "/session/connect":
                     session_id = data.get("session_id")
                     if not session_id or not session_manager.connect(session_id):
                         self.send_json(failure("session", "Unknown session_id"), HTTPStatus.NOT_FOUND)
                         return
-                    orchestrator = session_manager.get_orchestrator(session_id)
-                    output_language = None
-                    if orchestrator:
-                        output_language = (orchestrator.presentation_state.get("metadata") or {}).get("output_language")
-                    self.send_sdp(create_webrtc_session(data["sdp"], output_language))
+                    self.send_json({"success": True, "session_id": session_id})
                     return
 
                 if path == "/scene":
@@ -279,7 +283,7 @@ def make_request_handler(session_manager):
                         self.send_json(failure("communication", "scene_update is required"), HTTPStatus.BAD_REQUEST)
                         return
                     call_id = data.get("call_id")
-                    LOGGER.info("[%s] realtime scene call_id=%s action=%s", session_id, call_id, scene_update.get("action"))
+                    LOGGER.info("[%s] scene call_id=%s action=%s", session_id, call_id, scene_update.get("action"))
                     result = orchestrator.apply_realtime_scene(scene_update, call_id)
                     self.send_json(result, HTTPStatus.OK if result.get("success") else HTTPStatus.BAD_REQUEST)
                     return
@@ -316,28 +320,34 @@ def make_request_handler(session_manager):
                         self.send_json(failure("session", "Unknown session_id"), HTTPStatus.NOT_FOUND)
                         return
                     session_manager.note_transcript(session_id)
+                    detected_language = str(data.get("language") or "").strip()
+                    if detected_language and detected_language.lower() not in {"unknown", "auto"}:
+                        orchestrator.presentation_state.setdefault("metadata", {})["output_language"] = normalize_output_language(detected_language)
                     event = TranscriptEvent(
                         transcript=data["transcript"],
                         is_final=data.get("is_final", False),
-                        source="openai-realtime-webrtc",
+                        source=data.get("source", "browser-speech-recognition"),
                         event_id=data.get("event_id", "browser-event"),
                     )
-                    LOGGER.info("[%s] transcript received event_id=%s final=%s", session_id, event.event_id, event.is_final)
+                    LOGGER.info("[%s] transcript received event_id=%s final=%s chars=%s source=%s", session_id, event.event_id, event.is_final, len(event.transcript), event.source)
                     result = orchestrator.receive_transcript(event.transcript, event.event_id, event.is_final)
                     session = session_manager.get(session_id)
                     if session:
                         session.execution_metadata["last_result"] = {
                             "planned": result.get("planned"),
+                            "success": result.get("success", True),
+                            "reason": result.get("reason", ""),
                             "correlation_id": result.get("correlation_id"),
                             "scene_updated": result.get("scene_updated"),
                         }
                     self.send_json({
+                        "success": result.get("success", True),
                         "planned": result["planned"],
                         "reason": result.get("reason", ""),
                         "correlation_id": event.event_id,
                         "session_id": session_id,
                         "scene_updated": result.get("scene_updated", False),
-                    })
+                    }, HTTPStatus.OK if result.get("success", True) else HTTPStatus.BAD_GATEWAY)
                     return
 
                 self.send_error(HTTPStatus.NOT_FOUND)
@@ -347,11 +357,7 @@ def make_request_handler(session_manager):
             except json.JSONDecodeError:
                 LOGGER.warning("Communication request had invalid JSON")
                 self.send_json(failure("communication", "Request could not be processed", retryable=False), HTTPStatus.BAD_REQUEST)
-            except requests.HTTPError as error:
-                detail = error.response.text[:200] if error.response is not None else str(error)
-                LOGGER.warning("OpenAI Realtime request failed: %s", detail)
-                self.send_json(failure("communication", "Realtime connection could not be established", retryable=True), HTTPStatus.BAD_GATEWAY)
-            except (RuntimeError, requests.RequestException) as error:
+            except RuntimeError as error:
                 LOGGER.warning("Communication request failed: %s", error)
                 self.send_json(failure("communication", "Request could not be processed", retryable=True), HTTPStatus.BAD_GATEWAY)
 
@@ -364,14 +370,6 @@ def make_request_handler(session_manager):
         def read_json(self) -> dict:
             length = int(self.headers.get("Content-Length", "0"))
             return json.loads(self.rfile.read(length))
-
-        def send_sdp(self, sdp: str) -> None:
-            content = sdp.encode()
-            self.send_response(HTTPStatus.OK)
-            self.send_header("Content-Type", "application/sdp")
-            self.send_header("Content-Length", str(len(content)))
-            self.end_headers()
-            self.wfile.write(content)
 
         def send_json(self, data: dict, status: HTTPStatus = HTTPStatus.OK) -> None:
             content = json.dumps(data).encode()

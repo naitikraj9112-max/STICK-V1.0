@@ -4,14 +4,14 @@
 
 ```text
 Browser microphone
-  ↓ WebRTC
-OpenAI Realtime API
-  ↓ transcript events over the data channel
+  ↓ continuous 16 kHz PCM stream
+Sarvam Saaras v4 realtime WebSocket (when SARVAM_API_KEY is configured)
+  ↓ partial transcript for display; final utterances for planning
 Communication Layer
   ↓ transcript snapshot + session_id
 Session Manager
   ↓ session-scoped orchestrator
-Semantic Detector
+Semantic Detector (DeepSeek)
   ↓ meaningful update
 Memory Retrieval → Presentation Context → Presentation Planner → Critic
                                                         ↓
@@ -40,8 +40,8 @@ Session lifecycle: `created → connected → active → disconnected → comple
 
 | Module | Responsibility |
 | --- | --- |
-| `communication/static/index.html` | Creates a session, captures microphone audio, WebRTC to OpenAI, displays scenes and generation status. |
-| `communication/server.py` | API key server-side, SDP exchange, session routing, transcript relay, health, graceful request handling. |
+| `communication/static/index.html` | Creates a session, captures microphone audio for Sarvam or browser speech-recognition fallback, and displays scenes and generation status. |
+| `communication/server.py` | Keeps API keys server-side, routes audio clips to Sarvam, relays transcripts, and serves health and presentation output. |
 | `session.py` | Presentation session model and lifecycle helpers. |
 | `session_manager.py` | Registry of sessions; one orchestrator + isolated generator workspace per session. |
 | `orchestrator.py` | Coordinates detector, memory, planner, critic, state manager, generation for one session. |
@@ -57,13 +57,22 @@ Session lifecycle: `created → connected → active → disconnected → comple
 | `presentation_generator/` | Post-commit SVG + PPTX generation via real PPT Master scripts. |
 | `ingestion.py` | Application entrypoint with logging and graceful shutdown. |
 
+## Image & TTS providers
+
+Live slide imagery selects the first configured provider in order:
+1. **Pollinations** (`POLLINATIONS_API_KEY`)
+2. **Cloudflare Worker** (`CF_WORKER_URL`, posting JSON `{"prompt": ...}` to `/generate`)
+3. **Gemini** (`GEMINI_API_KEY`)
+
+Narration TTS selects **Sarvam Bulbul** (`SARVAM_API_KEY`), then **Gemini TTS** (`GEMINI_API_KEY`), falling back to **Edge TTS**. `GROQ_API_KEY` is legacy-only and is not read by the application.
+
+The default mode generates and displays live slide images only (`VIDEO_ENABLED=false`). When `VIDEO_ENABLED=true`, the video pipeline generates narration and TTS audio alongside slide renders into an MP4 file.
+
 ## Original pipeline detail
 
 ```text
 Browser microphone
-  ↓ WebRTC
-OpenAI Realtime API
-  ↓ transcript events over the data channel
+  ↓ Sarvam Saaras v4 realtime WebSocket (or browser speech recognition fallback)
 Communication Layer
   ↓ transcript snapshot
 Orchestrator
@@ -84,8 +93,8 @@ Frontend
 
 | Module | Responsibility |
 | --- | --- |
-| `communication/static/index.html` | Captures browser microphone audio, creates WebRTC, receives Realtime events, and displays the render model. |
-| `communication/server.py` | Keeps the API key server-side, exchanges SDP with OpenAI, relays transcript events to the orchestrator, and serves rendering output. |
+| `communication/static/index.html` | Captures browser speech-recognition results and displays the render model. |
+| `communication/server.py` | Keeps the DeepSeek API key server-side, relays transcripts to the orchestrator, and serves rendering output. |
 | `orchestrator.py` | Coordinates detector, memory retrieval, planner, critic, state manager, and post-update memory recording. It does not decide scene contents or mutate state itself. |
 | `semantic_detector.py` | Uses its LLM and prompt to decide whether a transcript update warrants planning. |
 | `memory/manager.py` | The high-level, failure-tolerant memory API used by the orchestrator. |
@@ -193,10 +202,9 @@ The orchestrator serializes one local transcript cycle at a time and tracks a
 small recent event-id set, preventing duplicate events from creating duplicate
 scenes or memories. Each cycle uses the event id as its log correlation id.
 
-The browser handles Realtime connection, data-channel, transcription-error, and
-server delivery failures with visible status text and bounded exponential
-reconnection. `/health` exposes backend, Neon, OpenAI configuration, and Realtime
-readiness without failing simply because optional Neon memory is unavailable.
+The browser handles speech-recognition and server-delivery failures with visible
+status text. `/health` exposes backend, Neon, DeepSeek configuration, and browser
+speech recognition without failing simply because optional Neon memory is unavailable.
 
 ## Efficient execution policy
 
@@ -277,7 +285,7 @@ memory only.
 
 ```text
 POST /session → created
-POST /realtime/session → connected
+POST /session/connect → connected
 POST /transcript → active
 POST /session/disconnect or shutdown → disconnected / completed
 ```

@@ -1,1 +1,1 @@
-"""OpenAI Realtime communication layer."""
+"""Browser speech-recognition communication layer."""

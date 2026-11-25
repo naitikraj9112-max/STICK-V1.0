@@ -207,7 +207,8 @@ def apply_structured_scene_guard(scene_update: dict, state: dict, min_new_scene_
     if age is not None and age < min_dwell:
         return {**scene_update, "action": "merge"}
 
-    return {**scene_update, "action": "merge"}
+    # Dwell time passed — allow the new slide to be created
+    return scene_update
 
 
 def normalize_realtime_payload(payload: dict, has_current_scene: bool, state: dict | None = None) -> dict | None:

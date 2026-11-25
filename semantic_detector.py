@@ -2,10 +2,9 @@
 
 from typing import Literal
 
-from langchain_openai import ChatOpenAI
 from pydantic import BaseModel, Field
 
-from config import LLM_TIMEOUT_SECONDS
+from deepseek_client import create_chat_model
 from reliability import retry_call
 
 class UpdateDecision(BaseModel):
@@ -19,8 +18,8 @@ class SemanticDetector:
     """Owns the semantic detection model and its prompt."""
 
     def __init__(self, detector_llm=None):
-        llm = detector_llm or ChatOpenAI(model="gpt-4o-mini", temperature=0, timeout=LLM_TIMEOUT_SECONDS, max_retries=0)
-        self.detector = llm.with_structured_output(UpdateDecision)
+        llm = detector_llm or create_chat_model()
+        self.detector = llm.with_structured_output(UpdateDecision, method="function_calling")
 
     def detect(self, previous_transcript: str, latest_transcript: str, correlation_id: str = "-") -> UpdateDecision:
         """Return whether the latest snapshot justifies a planner call."""
@@ -34,10 +33,13 @@ Latest transcript snapshot:
 
 Compare the snapshots semantically. Set should_plan true only if the latest
 snapshot adds a self-contained completed idea, a meaningful new concept, or a
-topic change that deserves a presentation update. When the previous snapshot is
-empty and the latest contains a complete spoken sentence, should_plan should
-usually be true. Do not trigger for partial phrases, elaboration without a
-complete point, filler, or when the latest snapshot is essentially the same as
-the previous one with no new presentable idea.
-approved_content must contain only the newly approved idea, never prior text."""
+topic change that deserves a presentation update. Also treat a clear spoken
+slide-building direction (such as "introduce the topic", "explain the problem",
+"compare the options", or "add a slide about benefits") as an actionable request
+to build presentation content. These are not disposable meta-instructions: the
+planner should apply them to the current topic and deck context. When the previous
+snapshot is empty and the latest contains a complete spoken sentence, should_plan
+should usually be true. Do not trigger for partial phrases, filler, or when the
+latest snapshot is essentially the same as the previous one with no new request.
+approved_content must contain only the newly approved idea or slide direction."""
         return retry_call(lambda: self.detector.invoke(prompt), "semantic detector", correlation_id)

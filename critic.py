@@ -2,10 +2,9 @@
 
 from typing import Literal
 
-from langchain_openai import ChatOpenAI
 from pydantic import BaseModel, Field
 
-from config import LLM_TIMEOUT_SECONDS
+from deepseek_client import create_chat_model
 from presentation_context import slide_language_instructions, preferred_output_language
 from reliability import retry_call
 
@@ -23,8 +22,8 @@ class PresentationCritic:
     """Owns evaluation only; it never changes presentation state."""
 
     def __init__(self, critic_llm=None):
-        llm = critic_llm or ChatOpenAI(model="gpt-4o-mini", temperature=0, timeout=LLM_TIMEOUT_SECONDS, max_retries=0)
-        self.critic = llm.with_structured_output(CriticDecision)
+        llm = critic_llm or create_chat_model()
+        self.critic = llm.with_structured_output(CriticDecision, method="function_calling")
 
     def review(self, scene_decision: dict, context: dict, correlation_id: str = "-") -> CriticDecision:
         """Approve a focused scene or provide feedback for one bounded retry."""

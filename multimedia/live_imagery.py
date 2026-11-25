@@ -1,11 +1,11 @@
-"""ZeroPrep-style live Gemini visuals — editorial panel images for every slide."""
+"""Non-blocking AI image generation for slide visuals."""
 
 import logging
 from threading import Lock, Thread
 
-from config import GEMINI_API_KEY
+from config import CF_WORKER_URL, GEMINI_API_KEY, POLLINATIONS_API_KEY
 from multimedia.image_agent import ImageAgent
-from multimedia.providers.gemini_image import GeminiImageProvider
+from multimedia.providers.image_factory import configured_image_provider
 from multimedia.workspace import MediaWorkspace
 
 from presentation_generator.visual_strategy import resolve_visual_plan
@@ -28,7 +28,7 @@ class LiveImageryManager:
     def __init__(self, session_id: str, artifact_dir=None, on_image_ready=None):
         self.session_id = session_id
         self.workspace = MediaWorkspace(session_id, artifact_dir)
-        self.image_agent = ImageAgent(GeminiImageProvider(), self.workspace)
+        self.image_agent = ImageAgent(configured_image_provider(), self.workspace)
         self._on_image_ready = on_image_ready
         self._lock = Lock()
         self._active_scene_id: str | None = None
@@ -44,6 +44,8 @@ class LiveImageryManager:
             ready_count = sum(1 for status in self._status.values() if status == "ready")
             return {
                 "gemini_configured": bool(GEMINI_API_KEY),
+                "image_provider_configured": self.image_agent.provider.available if self.image_agent.provider else False,
+                "image_provider": "pollinations" if POLLINATIONS_API_KEY else "cloudflare" if CF_WORKER_URL else "gemini" if GEMINI_API_KEY else "unavailable",
                 "generating": generating,
                 "ready_count": ready_count,
                 "last_error": self._last_error,
@@ -54,10 +56,10 @@ class LiveImageryManager:
         self._on_image_ready = callback
 
     def schedule(self, scene: dict, director_action: str, previous_scene: dict | None, correlation_id: str = "-") -> None:
-        if not GEMINI_API_KEY or not self.image_agent.provider or not self.image_agent.provider.available:
+        if not self.image_agent.provider or not self.image_agent.provider.available:
             with self._lock:
-                self._last_error = "GEMINI_API_KEY not configured"
-            LOGGER.info("[%s] live imagery skipped — Gemini not configured", correlation_id)
+                self._last_error = "No image provider configured"
+            LOGGER.info("[%s] live imagery skipped — no image provider configured", correlation_id)
             return
         kind = scene.get("kind", "hero")
         if kind not in LIVE_IMAGE_KINDS:

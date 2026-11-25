@@ -2,9 +2,7 @@
 
 import json
 
-from langchain_openai import ChatOpenAI
-
-from config import LLM_TIMEOUT_SECONDS
+from deepseek_client import create_chat_model
 from presentation_context import build_presentation_context, preferred_output_language, slide_language_instructions
 from reliability import retry_call
 from tools import SceneDecision, stage_scene, tools
@@ -20,7 +18,7 @@ def presenter_planner(
 ) -> dict:
     """Return one scene update for already-approved transcript content."""
     current_state = current_state if current_state is not None else {}
-    llm_with_tools = (planner_llm or ChatOpenAI(model="gpt-4o-mini", temperature=0, timeout=LLM_TIMEOUT_SECONDS, max_retries=0)).bind_tools(
+    llm_with_tools = (planner_llm or create_chat_model()).bind_tools(
         tools, tool_choice="required"
     )
     context = build_presentation_context(transcript_chunk, current_state, relevant_memory)
@@ -28,6 +26,11 @@ def presenter_planner(
     prompt = f"""You are an expert AI Presentation Planner.
 
 Turn the approved spoken content into one concise presentation-scene update.
+Treat clear spoken directions as instructions for what the next slide should
+communicate. Use the active slide, deck topic, presentation goal, and prior
+sections to resolve references such as "the topic" or "why it matters". Create
+useful slide copy from that context; do not copy a generic instruction verbatim
+as the slide title or subtitle.
 
 {language_rule}
 
@@ -42,11 +45,19 @@ Reason from the meaning, not simple keyword matching: hero suits a product or
 section introduction; cards compare several features or ideas; pipeline shows a
 sequence; metric shows results or statistics; quote emphasizes a memorable
 statement. Select the presentation_stage as a helpful narrative hint, not a
-required fixed order. Consider current and completed scenes to tell whether this
-is a new section. If the active scene is crowded, mixes major ideas, or no longer
-supports one primary idea, use start_new_scene instead of merge. Use replace to
-revise the active slide, merge to add detail to it, start_new_scene to finalize
-it and start a new one, or complete_scene to finalize the active slide."""
+required fixed order.
+
+CRITICAL SLIDE LIFECYCLE RULES:
+- Presentations consist of multiple sequential slides built as the speaker talks.
+- When the active slide already has content (title/primary idea) and the speaker
+  introduces a new point, problem, solution, feature, architecture, metric, comparison,
+  or conclusion, you MUST choose action='start_new_scene' so the previous slide is
+  completed and a new slide appears on screen!
+- Use action='merge' ONLY when the speaker is adding a quick supplementary bullet
+  or secondary detail specifically to the active slide.
+- Use action='replace' ONLY when the speaker explicitly corrects, edits, or rephrases
+  the active slide (e.g., 'let's change the title to...', 'actually make it 40%', etc.).
+- When starting from a blank deck or cover slide, use action='start_new_scene' or 'replace'."""
     response = retry_call(lambda: llm_with_tools.invoke(prompt), "planner", correlation_id)
     if not response.tool_calls:
         raise RuntimeError("Planner did not return a stage_scene tool call.")

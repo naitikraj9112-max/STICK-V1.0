@@ -64,7 +64,7 @@ class PptMasterAdapter:
         index = scene.get("slide_index", 1)
         path = output / (filename or _slide_filename(index, scene))
         background = (scene_images or {}).get(scene.get("id", ""))
-        path.write_text(build_scene_svg(scene, background_image=background))
+        path.write_text(build_scene_svg(scene, background_image=background), encoding="utf-8")
         return path
 
     def write_all_scenes(self, scenes: list[dict], workspace: Path, scene_images: dict[str, str] | None = None) -> None:

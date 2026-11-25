@@ -2,13 +2,14 @@
 
 import inspect
 import logging
+import re
 from collections import deque
 from copy import deepcopy
 from threading import RLock, Thread
 from uuid import uuid4
 
 from critic import PresentationCritic
-from execution_policy import should_plan_multimedia, should_run_critic
+from execution_policy import should_run_critic
 from memory import MemoryManager
 from memory.extraction import MemoryExtractor
 from multimedia import MultimediaManager
@@ -62,6 +63,7 @@ class PresentationOrchestrator:
         self.presentation_generator.scene_image_resolver = self._scene_image_map_for_export
         self.memory_manager.clear_session()
         self.last_transcript = ""
+        self._transcript_buffer = ""
         self._lock = RLock()
         self._processed_events = deque(maxlen=100)
 
@@ -124,41 +126,99 @@ class PresentationOrchestrator:
             "generation": {"status": "generating", "message": "Exporting PowerPoint in background…"},
         }
 
+    @staticmethod
+    def combine_transcript(previous: str, latest: str) -> str:
+        """Merge speech fragments, or keep a growing snapshot if the client already sent one."""
+        previous = (previous or "").strip()
+        latest = (latest or "").strip()
+        if not previous:
+            return latest
+        if not latest:
+            return previous
+        if latest == previous or latest.startswith(previous):
+            return latest
+        if previous.startswith(latest):
+            return previous
+        return f"{previous} {latest}".strip()
+
     def _receive_transcript(self, latest_transcript: str, event_id: str | None, is_final: bool) -> dict:
         latest_transcript = latest_transcript.strip()
         correlation_id = event_id or str(uuid4())
         accounting = {"event_id": correlation_id, "session_id": self.session_id, "detector_called": False, "memory_retrieved": False, "planner_called": False, "critic_called": False, "refinement_called": False, "scene_updated": False}
         if not is_final:
-            return {"planned": False, "reason": "Partial transcript ignored until utterance completes.", "correlation_id": correlation_id, **accounting}
-        if not latest_transcript or latest_transcript == self.last_transcript or correlation_id in self._processed_events:
-            return {"planned": False, "reason": "Duplicate or empty transcript ignored.", "correlation_id": correlation_id, **accounting}
+            return {"planned": False, "reason": "Partial transcript ignored until utterance completes.", "correlation_id": correlation_id, **accounting, "success": True}
+        candidate_text = self.combine_transcript(getattr(self, "_transcript_buffer", ""), latest_transcript)
+        if not latest_transcript or correlation_id in self._processed_events:
+            return {"planned": False, "reason": "Duplicate or empty transcript ignored.", "correlation_id": correlation_id, **accounting, "success": True}
+        if candidate_text == self.last_transcript and not getattr(self, "_transcript_buffer", ""):
+            return {"planned": False, "reason": "Duplicate or empty transcript ignored.", "correlation_id": correlation_id, **accounting, "success": True}
+        if latest_transcript == self.last_transcript and candidate_text == latest_transcript:
+            return {"planned": False, "reason": "Duplicate or empty transcript ignored.", "correlation_id": correlation_id, **accounting, "success": True}
 
         try:
             accounting["detector_called"] = True
-            decision = self._detect(latest_transcript, correlation_id)
+            decision = self._detect(candidate_text, correlation_id)
             LOGGER.info("[%s][%s] semantic decision should_plan=%s type=%s", self.session_id, correlation_id, decision.should_plan, decision.update_type)
         except Exception as error:
             LOGGER.error("[%s][%s] semantic detector failed", self.session_id, correlation_id)
             return {"planned": False, "reason": "Semantic detector temporarily unavailable.", "correlation_id": correlation_id, **accounting, **failure("semantic_detector", "Semantic detector temporarily unavailable", is_retryable(error))}
 
-        self.last_transcript = latest_transcript
+        from presentation_cover import deck_is_empty
+        word_count = len(candidate_text.split())
+        # Spoken slide directions are often short (for example, "Introduce the
+        # topic and why it matters"). The semantic detector can mistake these
+        # for meta-instructions and leave the live deck waiting forever.
+        slide_instruction = self._is_slide_instruction(candidate_text)
+        if slide_instruction and not decision.should_plan:
+            decision.should_plan = True
+            decision.approved_content = candidate_text
+        if not decision.should_plan:
+            if deck_is_empty(self.presentation_state) and word_count >= 3:
+                decision.should_plan = True
+                decision.approved_content = candidate_text
+            elif word_count >= 6:
+                decision.should_plan = True
+                decision.approved_content = candidate_text
+
+        if decision.should_plan:
+            self._transcript_buffer = ""
+        else:
+            self._transcript_buffer = candidate_text
+            self.last_transcript = latest_transcript
+            self._processed_events.append(correlation_id)
+            return {
+                "planned": False,
+                "success": True,
+                "reason": decision.reason or "Waiting for a complete spoken idea.",
+                "correlation_id": correlation_id,
+                **accounting,
+                **decision.model_dump(),
+                "execution": accounting,
+            }
+
         self._processed_events.append(correlation_id)
 
+        approved_content = decision.approved_content or candidate_text
         result = {"planned": decision.should_plan, "success": True, "correlation_id": correlation_id, **accounting, **decision.model_dump()}
         result["execution"] = accounting
         if decision.should_plan:
             accounting["memory_retrieved"] = True
-            relevant_memory = self._retrieve_memory(decision.approved_content, correlation_id)
+            relevant_memory = self._retrieve_memory(approved_content, correlation_id)
             try:
                 accounting["planner_called"] = True
-                scene_update = SceneDecision.model_validate(self._plan(decision.approved_content, relevant_memory=relevant_memory, correlation_id=correlation_id)).model_dump()
+                scene_update = SceneDecision.model_validate(self._plan(approved_content, relevant_memory=relevant_memory, correlation_id=correlation_id)).model_dump()
                 LOGGER.info("[%s][%s] planner action=%s kind=%s", self.session_id, correlation_id, scene_update["action"], scene_update["kind"])
             except Exception as error:
                 LOGGER.error("[%s][%s] planner failed; state unchanged", self.session_id, correlation_id)
+                if correlation_id in self._processed_events:
+                    try:
+                        self._processed_events.remove(correlation_id)
+                    except ValueError:
+                        pass
                 result.update({"planned": False, "success": False, "reason": "Planner temporarily unavailable.", **failure("planner", "Planner temporarily unavailable", is_retryable(error))})
                 result.update(accounting)
                 return result
-            context = build_presentation_context(decision.approved_content, self.presentation_state, relevant_memory)
+            context = build_presentation_context(approved_content, self.presentation_state, relevant_memory)
             original_scene_update = scene_update
             critique = None
             if should_run_critic(scene_update, self.presentation_state):
@@ -177,7 +237,7 @@ class PresentationOrchestrator:
                 try:
                     accounting["refinement_called"] = True
                     accounting["planner_called"] = True
-                    refined_scene_update = SceneDecision.model_validate(self._plan(decision.approved_content, critique.model_dump(), relevant_memory, correlation_id)).model_dump()
+                    refined_scene_update = SceneDecision.model_validate(self._plan(approved_content, critique.model_dump(), relevant_memory, correlation_id)).model_dump()
                     accounting["critic_called"] = True
                     critique = self._review(refined_scene_update, context, correlation_id)
                     result["refined"] = True
@@ -210,12 +270,23 @@ class PresentationOrchestrator:
                 result.update(accounting)
                 return result
             state_snapshot = deepcopy(self.presentation_state)
+            self.last_transcript = candidate_text
             self._schedule_async_generation(scene_update["action"], state_snapshot, correlation_id)
-            self._schedule_async_multimedia(state_snapshot, correlation_id)
             self._record_memory(scene_update, decision)
             result["generation"] = self.presentation_generator.status()
         result.update(accounting)
         return result
+
+    @staticmethod
+    def _is_slide_instruction(text: str) -> bool:
+        """Recognize concise spoken requests to add or shape presentation content."""
+        normalized = re.sub(r"[^a-z0-9' ]+", " ", text.lower())
+        patterns = (
+            r"\b(?:introduce|explain|describe|summari[sz]e|outline|compare|show|highlight|cover)\b.{0,100}\b(?:topic|subject|point|idea|problem|solution|feature|benefit|result|reason|slide|approach|process|audience|why)\b",
+            r"\b(?:add|create|build|make|generate)\b.{0,60}\b(?:slide|section|presentation|deck|chart|comparison|overview)\b",
+            r"\b(?:talk|speak)\s+about\b.{2,}",
+        )
+        return len(normalized.split()) >= 3 and any(re.search(pattern, normalized) for pattern in patterns)
 
     def _schedule_async_generation(self, action: str, state_snapshot: dict, correlation_id: str) -> None:
         def run() -> None:
@@ -231,20 +302,8 @@ class PresentationOrchestrator:
         return build_scene_image_map(state, self.session_id, self.live_imagery.scene_image_map())
 
     def _on_live_image_ready(self, scene_id: str, image_path: str) -> None:
-        LOGGER.info("[%s] Gemini image ready for scene=%s — syncing PPTX visuals", self.session_id, scene_id)
+        LOGGER.info("[%s] AI image ready for scene=%s — syncing PPTX visuals", self.session_id, scene_id)
         self._schedule_async_generation("sync_images", deepcopy(self.presentation_state), f"image-{scene_id}")
-
-    def _schedule_async_multimedia(self, state_snapshot: dict, correlation_id: str) -> None:
-        if not should_plan_multimedia(state_snapshot):
-            return
-
-        def run() -> None:
-            try:
-                self.multimedia_manager.schedule_after_state_commit(state_snapshot, correlation_id)
-            except Exception:
-                LOGGER.exception("[%s][%s] background multimedia failed", self.session_id, correlation_id)
-
-        Thread(target=run, daemon=True).start()
 
     def _schedule_async_realtime_memory(self, scene_update: dict, correlation_id: str) -> None:
         def run() -> None:

@@ -5,13 +5,14 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from zipfile import is_zipfile
 
-from config import OPENAI_API_KEY, DATABASE_URL, PPT_MASTER_ROOT, PPT_MASTER_WORKSPACE
+from config import DATABASE_URL, DEEPSEEK_API_KEY, PPT_MASTER_ROOT, PPT_MASTER_WORKSPACE
 from critic import CriticDecision
 from demo_memory import InMemoryRepository
 from execution_policy import should_run_critic
 from memory import MemoryManager
 from orchestrator import PresentationOrchestrator
 from presentation_context import build_presentation_context
+from presentation_cover import is_cover_scene
 from presentation_generator import PresentationGenerator
 from presentation_generator.ppt_master_adapter import PptMasterAdapter, prepare_session_workspace
 from semantic_detector import UpdateDecision
@@ -35,7 +36,8 @@ class LocalCritic:
 
 
 def local_planner(transcript, state, refinement_feedback=None, relevant_memory=None, **_kwargs):
-    if not state.get("current_scene"):
+    current = state.get("current_scene")
+    if not current or is_cover_scene(current):
         return {
             "action": "replace", "kind": "hero", "title": "Stick", "subtitle": transcript[:80],
             "cards": [], "metrics": [], "primary_idea": transcript[:120], "presentation_stage": "introduction",
@@ -132,14 +134,14 @@ def run_local_pipeline() -> None:
     manager.complete(session.session_id)
     assert manager.get(session.session_id).status == "completed"
     assert session_summary(session)["status"] == "completed"
-    print("LOCAL: session → transcript → planner → critic policy → state → generation boundary passed.")
+    print("LOCAL: session -> transcript -> planner -> critic policy -> state -> generation boundary passed.")
 
 
-def run_live_openai_block() -> None:
-    if not OPENAI_API_KEY:
-        print("LIVE OPENAI: skipped (OPENAI_API_KEY not set).")
+def run_live_deepseek_block() -> None:
+    if not DEEPSEEK_API_KEY:
+        print("LIVE DEEPSEEK: skipped (DEEPSEEK_API_KEY not set).")
         return
-    print("LIVE OPENAI: credentials present; run ingestion.py and speak to verify realtime path manually.")
+    print("LIVE DEEPSEEK: credentials present; run ingestion.py and speak to verify the live path manually.")
 
 
 def run_live_neon_block() -> None:
@@ -151,7 +153,7 @@ def run_live_neon_block() -> None:
 
 def main() -> None:
     run_local_pipeline()
-    run_live_openai_block()
+    run_live_deepseek_block()
     run_live_neon_block()
     print("End-to-end demo passed.")
 

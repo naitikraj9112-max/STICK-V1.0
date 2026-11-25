@@ -36,7 +36,9 @@ class GeminiTTSProvider(TTSProvider):
         extension = extension_for_mime(mime, output_path.suffix.lstrip(".") or "wav")
         target = output_path.with_suffix(f".{extension}")
         target.parent.mkdir(parents=True, exist_ok=True)
-        if mime in {"audio/L16", "audio/pcm", "audio/raw"} or extension == "wav":
+        if data.startswith(b"RIFF"):
+            target.write_bytes(data)
+        elif mime in {"audio/L16", "audio/pcm", "audio/raw"} or extension == "wav":
             _write_wav(target, data)
         else:
             target.write_bytes(data)

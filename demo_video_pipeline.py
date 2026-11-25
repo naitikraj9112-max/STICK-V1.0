@@ -104,42 +104,47 @@ def sample_state():
     }
 
 
-def test_pptx_independent_when_video_fails():
-    with TemporaryDirectory() as directory:
-        artifact_dir = Path(directory)
-        session_id = str(uuid4())
-        ppt = PresentationGenerator(adapter=FakePptMaster(), artifact_dir=artifact_dir, session_id=session_id)
-        ppt_result = ppt.generate_for_action("replace", sample_state())
-        assert ppt_result.status == "ready"
+from unittest.mock import patch
 
-        manager = MultimediaManager(
-            session_id=session_id,
-            artifact_dir=artifact_dir,
-            image_provider=FakeImageProvider(),
-            text_provider=FakeTextProvider(),
-            tts_provider=FakeTTSProvider(),
-            renderer=VideoRenderer(ffmpeg_path="__missing__"),
-        )
-        video_result = manager.generate_video(sample_state())
-        assert video_result.status == "error"
-        assert ppt.status()["status"] == "ready"
-        assert Path(ppt.status()["artifact_path"]).is_file()
+
+def test_pptx_independent_when_video_fails():
+    with patch("multimedia.manager.VIDEO_ENABLED", True):
+        with TemporaryDirectory() as directory:
+            artifact_dir = Path(directory)
+            session_id = str(uuid4())
+            ppt = PresentationGenerator(adapter=FakePptMaster(), artifact_dir=artifact_dir, session_id=session_id)
+            ppt_result = ppt.generate_for_action("replace", sample_state())
+            assert ppt_result.status == "ready"
+
+            manager = MultimediaManager(
+                session_id=session_id,
+                artifact_dir=artifact_dir,
+                image_provider=FakeImageProvider(),
+                text_provider=FakeTextProvider(),
+                tts_provider=FakeTTSProvider(),
+                renderer=VideoRenderer(ffmpeg_path="__missing__"),
+            )
+            video_result = manager.generate_video(sample_state())
+            assert video_result.status == "error"
+            assert ppt.status()["status"] == "ready"
+            assert Path(ppt.status()["artifact_path"]).is_file()
     print("pptx remains when video fails ok")
 
 
 def test_duplicate_generation_request():
-    with TemporaryDirectory() as directory:
-        manager = MultimediaManager(
-            session_id=str(uuid4()),
-            artifact_dir=Path(directory),
-            image_provider=FakeImageProvider(),
-            text_provider=FakeTextProvider(),
-            tts_provider=FakeTTSProvider(),
-            renderer=VideoRenderer(ffmpeg_path="__missing__"),
-        )
-        manager._generating = True
-        second = manager.generate_video(sample_state())
-        assert "already in progress" in second.message.lower() or second.status != "planning"
+    with patch("multimedia.manager.VIDEO_ENABLED", True):
+        with TemporaryDirectory() as directory:
+            manager = MultimediaManager(
+                session_id=str(uuid4()),
+                artifact_dir=Path(directory),
+                image_provider=FakeImageProvider(),
+                text_provider=FakeTextProvider(),
+                tts_provider=FakeTTSProvider(),
+                renderer=VideoRenderer(ffmpeg_path="__missing__"),
+            )
+            manager._generating = True
+            second = manager.generate_video(sample_state())
+            assert "already in progress" in second.message.lower() or second.status != "planning"
     print("duplicate generation request ok")
 
 
